@@ -106,7 +106,8 @@ export default function Login() {
       return;
     }
 
-    loginMutation.mutate({ username, password });
+    const fullUsername = `${username}@isptec.co.ao`;
+    loginMutation.mutate({ username: fullUsername, password });
   };
 
   const handleRegister = (e: React.FormEvent) => {
@@ -232,7 +233,7 @@ export default function Login() {
                 </form>
                 <div className="mt-4 text-sm text-muted-foreground text-center">
                   <p>Credenciais padrão:</p>
-                  <p className="font-mono">admin@isptec.co.ao / admin123</p>
+                  <p className="font-mono">admin / admin123</p>
                 </div>
               </TabsContent>
               
