@@ -123,7 +123,7 @@ export default function Login() {
             </Card>
           </div>
           
-          <div className="text-xs text-muted-foreground space-y-1">
+          <div className="text-xs text-white space-y-1">
             <p>Instituto Superior Politécnico de Tecnologias e Ciências</p>
             <p className="font-medium">© 2024 ISPTEC - Todos os direitos reservados</p>
           </div>
