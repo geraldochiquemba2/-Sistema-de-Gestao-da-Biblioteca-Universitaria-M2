@@ -15,6 +15,7 @@ import libraryBooksImage from "@assets/stock_images/library_books_collec_eea0da0
 import searchTechImage from "@assets/stock_images/digital_library_sear_4c7902fd.jpg";
 import readingBookImage from "@assets/stock_images/person_reading_book__57d87551.jpg";
 import studentsImage from "@assets/stock_images/students_studying_to_5a27559c.jpg";
+import ctaBackgroundImage from "@assets/stock_images/modern_library_inter_6d8deaa1.jpg";
 
 export default function Welcome() {
   const [, setLocation] = useLocation();
@@ -164,10 +165,18 @@ export default function Welcome() {
               ))}
             </div>
 
-            <div className="bg-primary/5 rounded-lg p-8 md:p-12 space-y-6">
-              <div className="max-w-3xl mx-auto text-center space-y-4">
-                <h2 className="text-3xl font-bold">Pronto para começar?</h2>
-                <p className="text-muted-foreground">
+            <div className="relative rounded-lg overflow-hidden p-8 md:p-12 space-y-6">
+              <div className="absolute inset-0">
+                <img 
+                  src={ctaBackgroundImage} 
+                  alt="Biblioteca moderna" 
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/70 to-black/80" />
+              </div>
+              <div className="max-w-3xl mx-auto text-center space-y-4 relative z-10">
+                <h2 className="text-3xl font-bold text-white">Pronto para começar?</h2>
+                <p className="text-white/90">
                   Entre no sistema com suas credenciais institucionais e tenha acesso a todo o nosso acervo,
                   reserve livros, gerencie empréstimos e muito mais.
                 </p>
