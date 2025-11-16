@@ -22,7 +22,7 @@ import { Link, useLocation } from "wouter";
 const menuItems = [
   {
     title: "Painel Principal",
-    url: "/",
+    url: "/dashboard",
     icon: LayoutDashboard,
   },
   {
