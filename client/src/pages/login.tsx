@@ -50,7 +50,8 @@ export default function Login() {
 
   const registerMutation = useMutation({
     mutationFn: async (userData: { 
-      name: string; 
+      name: string;
+      username: string;
       email: string; 
       password: string; 
       userType: string;
@@ -116,9 +117,11 @@ export default function Login() {
     }
 
     const fullEmail = `${registerEmail}@isptec.co.ao`;
+    const username = registerEmail;
 
     registerMutation.mutate({
       name: registerName,
+      username: username,
       email: fullEmail,
       password: registerPassword,
       userType: registerUserType,
