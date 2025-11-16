@@ -118,10 +118,12 @@ export default function Login() {
       return;
     }
 
+    const fullEmail = `${registerEmail}@isptec.co.ao`;
+
     registerMutation.mutate({
       name: registerName,
       username: registerUsername,
-      email: registerEmail,
+      email: fullEmail,
       password: registerPassword,
       userType: registerUserType,
     });
@@ -233,15 +235,19 @@ export default function Login() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="register-email">Email</Label>
-                    <Input
-                      id="register-email"
-                      type="email"
-                      placeholder="joao.silva@isptec.co.ao"
-                      value={registerEmail}
-                      onChange={(e) => setRegisterEmail(e.target.value)}
-                      data-testid="input-register-email"
-                      disabled={registerMutation.isPending}
-                    />
+                    <div className="flex items-center gap-0 border rounded-md bg-background">
+                      <Input
+                        id="register-email"
+                        type="text"
+                        placeholder="joao.silva"
+                        value={registerEmail}
+                        onChange={(e) => setRegisterEmail(e.target.value)}
+                        data-testid="input-register-email"
+                        disabled={registerMutation.isPending}
+                        className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                      <span className="pr-3 text-sm text-muted-foreground whitespace-nowrap">@isptec.co.ao</span>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="register-username">Nome de Utilizador</Label>
