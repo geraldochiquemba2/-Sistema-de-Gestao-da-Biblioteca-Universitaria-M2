@@ -19,7 +19,6 @@ export default function Login() {
   
   const [registerName, setRegisterName] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
-  const [registerUsername, setRegisterUsername] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerUserType, setRegisterUserType] = useState<"student" | "teacher" | "staff">("student");
   
@@ -52,7 +51,6 @@ export default function Login() {
   const registerMutation = useMutation({
     mutationFn: async (userData: { 
       name: string; 
-      username: string; 
       email: string; 
       password: string; 
       userType: string;
@@ -69,7 +67,6 @@ export default function Login() {
       });
       setRegisterName("");
       setRegisterEmail("");
-      setRegisterUsername("");
       setRegisterPassword("");
       setRegisterUserType("student");
     },
@@ -100,7 +97,7 @@ export default function Login() {
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!registerName || !registerUsername || !registerEmail || !registerPassword) {
+    if (!registerName || !registerEmail || !registerPassword) {
       toast({
         title: "Erro no cadastro",
         description: "Por favor, preencha todos os campos",
@@ -122,7 +119,6 @@ export default function Login() {
 
     registerMutation.mutate({
       name: registerName,
-      username: registerUsername,
       email: fullEmail,
       password: registerPassword,
       userType: registerUserType,
@@ -248,18 +244,6 @@ export default function Login() {
                       />
                       <span className="pr-3 text-sm text-muted-foreground whitespace-nowrap">@isptec.co.ao</span>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="register-username">Nome de Utilizador</Label>
-                    <Input
-                      id="register-username"
-                      type="text"
-                      placeholder="joaosilva"
-                      value={registerUsername}
-                      onChange={(e) => setRegisterUsername(e.target.value)}
-                      data-testid="input-register-username"
-                      disabled={registerMutation.isPending}
-                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="register-password">Senha</Label>
