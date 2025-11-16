@@ -6,8 +6,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PrivateRoute } from "@/components/PrivateRoute";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 import Welcome from "@/pages/welcome";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
@@ -36,6 +38,7 @@ function AuthenticatedRouter() {
 }
 
 function AuthenticatedLayout() {
+  const { logout } = useAuth();
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
@@ -49,7 +52,13 @@ function AuthenticatedLayout() {
           <div className="flex flex-col flex-1 overflow-hidden">
             <header className="flex items-center justify-between px-6 py-3 border-b bg-background sticky top-0 z-10">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <ThemeToggle />
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <Button variant="outline" onClick={logout} data-testid="button-logout">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sair
+                </Button>
+              </div>
             </header>
             <main className="flex-1 overflow-auto">
               <AuthenticatedRouter />
