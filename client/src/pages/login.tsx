@@ -230,7 +230,7 @@ export default function Login() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="register-email">Email</Label>
+                    <Label htmlFor="register-email">Email/Número de Matrícula</Label>
                     <div className="flex items-center gap-0 border rounded-md bg-background">
                       <Input
                         id="register-email"
