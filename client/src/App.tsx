@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import Welcome from "@/pages/welcome";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Books from "@/pages/books";
@@ -59,7 +60,7 @@ function Router() {
 
   return (
     <Switch>
-      <Route path="/" component={Login} />
+      <Route path="/" component={Welcome} />
       <Route path="/login" component={Login} />
       <Route>
         {isAuthPage ? <NotFound /> : <AuthenticatedLayout />}
