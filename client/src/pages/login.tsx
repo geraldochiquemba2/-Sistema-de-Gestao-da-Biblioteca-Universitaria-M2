@@ -33,7 +33,15 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/5 via-background to-accent/5">
+    <div className="min-h-screen flex items-center justify-center p-4 relative">
+      <div className="absolute inset-0 -z-10">
+        <img 
+          src="https://images.pexels.com/photos/8199629/pexels-photo-8199629.jpeg" 
+          alt="Biblioteca de fundo" 
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-background/85 to-background/90" />
+      </div>
       <div className="w-full max-w-md space-y-8">
         <div className="flex justify-start">
           <Button
