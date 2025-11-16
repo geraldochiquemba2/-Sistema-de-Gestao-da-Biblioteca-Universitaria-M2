@@ -37,6 +37,23 @@ export default function Login() {
         title: "Login realizado com sucesso!",
         description: `Bem-vindo ${data.user.name}`,
       });
+      
+      switch (data.user.userType) {
+        case "admin":
+          setLocation("/dashboard");
+          break;
+        case "teacher":
+          setLocation("/teacher/dashboard");
+          break;
+        case "student":
+          setLocation("/student/dashboard");
+          break;
+        case "staff":
+          setLocation("/staff/dashboard");
+          break;
+        default:
+          setLocation("/");
+      }
     },
     onError: (error: any) => {
       toast({

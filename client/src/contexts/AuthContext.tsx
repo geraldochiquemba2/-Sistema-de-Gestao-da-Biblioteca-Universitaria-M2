@@ -42,23 +42,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = (userData: User) => {
     setUser(userData);
     localStorage.setItem("user", JSON.stringify(userData));
-    
-    switch (userData.userType) {
-      case "admin":
-        setLocation("/dashboard");
-        break;
-      case "teacher":
-        setLocation("/teacher/dashboard");
-        break;
-      case "student":
-        setLocation("/student/dashboard");
-        break;
-      case "staff":
-        setLocation("/staff/dashboard");
-        break;
-      default:
-        setLocation("/");
-    }
   };
 
   const logout = () => {
