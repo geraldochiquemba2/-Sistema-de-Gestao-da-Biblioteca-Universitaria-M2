@@ -26,10 +26,8 @@ export default function Login() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: { username: string; password: string }) => {
-      return apiRequest("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify(credentials),
-      });
+      const response = await apiRequest("POST", "/api/auth/login", credentials);
+      return await response.json();
     },
     onSuccess: (data) => {
       localStorage.setItem("user", JSON.stringify(data.user));
@@ -56,10 +54,8 @@ export default function Login() {
       password: string; 
       userType: string;
     }) => {
-      return apiRequest("/api/users", {
-        method: "POST",
-        body: JSON.stringify(userData),
-      });
+      const response = await apiRequest("POST", "/api/users", userData);
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
