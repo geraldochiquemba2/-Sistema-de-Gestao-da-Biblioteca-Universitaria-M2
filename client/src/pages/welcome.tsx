@@ -11,6 +11,10 @@ import {
 } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
 import logoImage from "@assets/image_1763306167272.png";
+import libraryBooksImage from "@assets/stock_images/library_books_collec_eea0da0c.jpg";
+import searchTechImage from "@assets/stock_images/search_technology_co_53668875.jpg";
+import readingBookImage from "@assets/stock_images/person_reading_book__57d87551.jpg";
+import studentsImage from "@assets/stock_images/students_studying_to_5a27559c.jpg";
 
 export default function Welcome() {
   const [, setLocation] = useLocation();
@@ -28,21 +32,25 @@ export default function Welcome() {
       icon: BookOpen,
       title: "Acervo Completo",
       description: "Mais de 3.800 livros especializados em tecnologia e informática",
+      image: libraryBooksImage,
     },
     {
       icon: Search,
       title: "Busca Inteligente",
       description: "Encontre rapidamente o livro que precisa com nosso sistema de busca avançado",
+      image: searchTechImage,
     },
     {
       icon: Clock,
       title: "Gestão de Empréstimos",
       description: "Acompanhe seus empréstimos e prazos de devolução de forma simples",
+      image: readingBookImage,
     },
     {
       icon: Users,
       title: "Acesso Rápido",
       description: "Sistema disponível para estudantes, docentes e funcionários",
+      image: studentsImage,
     },
   ];
 
@@ -134,13 +142,21 @@ export default function Welcome() {
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               {features.map((feature, index) => (
-                <Card key={index} data-testid={`card-feature-${index}`}>
-                  <CardContent className="pt-6 space-y-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                      <feature.icon className="h-6 w-6 text-primary" />
+                <Card key={index} data-testid={`card-feature-${index}`} className="overflow-hidden relative">
+                  <div className="absolute inset-0">
+                    <img 
+                      src={feature.image} 
+                      alt={feature.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/70 to-black/50" />
+                  </div>
+                  <CardContent className="pt-6 space-y-3 relative z-10">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
+                      <feature.icon className="h-6 w-6 text-white" />
                     </div>
-                    <h3 className="font-semibold text-lg">{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                    <h3 className="font-semibold text-lg text-white">{feature.title}</h3>
+                    <p className="text-sm text-white/90 leading-relaxed">
                       {feature.description}
                     </p>
                   </CardContent>
