@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { BookOpen } from "lucide-react";
+import { BookOpen, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
@@ -35,6 +35,17 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/5 via-background to-accent/5">
       <div className="w-full max-w-md space-y-8">
+        <div className="flex justify-start">
+          <Button
+            variant="ghost"
+            onClick={() => setLocation("/")}
+            data-testid="button-back"
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Button>
+        </div>
         <div className="text-center space-y-4">
           <div className="flex justify-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary shadow-lg">
