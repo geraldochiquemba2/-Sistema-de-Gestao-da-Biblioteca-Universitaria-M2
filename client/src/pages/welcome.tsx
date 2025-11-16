@@ -58,6 +58,14 @@ export default function Welcome() {
   return (
     <div className="min-h-screen bg-background">
       <div className="relative min-h-screen flex flex-col">
+        <div className="absolute inset-0 -z-10 opacity-80">
+          <img 
+            src="https://images.pexels.com/photos/8199629/pexels-photo-8199629.jpeg" 
+            alt="Biblioteca de fundo" 
+            className="w-full h-full object-cover"
+          />
+        </div>
+        
         <header className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -79,14 +87,7 @@ export default function Welcome() {
           </div>
         </header>
 
-        <main className="flex-1 container mx-auto px-4 py-4 relative">
-          <div className="absolute inset-0 -z-10 opacity-80">
-            <img 
-              src="https://images.pexels.com/photos/8199629/pexels-photo-8199629.jpeg" 
-              alt="Biblioteca de fundo" 
-              className="w-full h-full object-cover"
-            />
-          </div>
+        <main className="flex-1 container mx-auto px-4 py-4">
           <div className="max-w-6xl mx-auto space-y-16">
             <div className="grid md:grid-cols-2 gap-12 items-center py-4">
               <div className="space-y-6">
