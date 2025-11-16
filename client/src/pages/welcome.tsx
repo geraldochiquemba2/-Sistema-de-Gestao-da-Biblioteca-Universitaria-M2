@@ -12,7 +12,7 @@ import {
 import Autoplay from "embla-carousel-autoplay";
 import logoImage from "@assets/image_1763306167272.png";
 import libraryBooksImage from "@assets/stock_images/library_books_collec_eea0da0c.jpg";
-import searchTechImage from "@assets/stock_images/search_technology_co_53668875.jpg";
+import searchTechImage from "@assets/stock_images/digital_library_sear_4c7902fd.jpg";
 import readingBookImage from "@assets/stock_images/person_reading_book__57d87551.jpg";
 import studentsImage from "@assets/stock_images/students_studying_to_5a27559c.jpg";
 
