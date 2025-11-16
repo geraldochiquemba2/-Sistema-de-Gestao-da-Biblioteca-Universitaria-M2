@@ -10,6 +10,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
+import logoImage from "@assets/image_1763306167272.png";
 
 export default function Welcome() {
   const [, setLocation] = useLocation();
@@ -53,8 +54,8 @@ export default function Welcome() {
         <header className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
-                <BookOpen className="h-7 w-7 text-primary-foreground" />
+              <div className="flex h-12 w-12 items-center justify-center">
+                <img src={logoImage} alt="ISPTEC Logo" className="h-12 w-12 object-contain" />
               </div>
               <div>
                 <h2 className="text-xl font-bold">Biblioteca ISPTEC</h2>
