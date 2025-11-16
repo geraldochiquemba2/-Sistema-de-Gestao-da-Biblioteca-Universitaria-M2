@@ -41,7 +41,6 @@ export default function Login() {
           alt="Biblioteca de fundo" 
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-background/20 via-background/15 to-background/20" />
       </div>
       <div className="w-full max-w-md space-y-8">
         <div className="flex justify-start">
