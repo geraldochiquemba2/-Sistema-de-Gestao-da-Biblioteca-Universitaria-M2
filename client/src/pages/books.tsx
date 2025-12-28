@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Search, BookOpen, Tag } from "lucide-react";
+import { Plus, Search, BookOpen, Tag, Camera, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -39,7 +39,45 @@ const tagColors = {
 export default function Books() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const { toast } = useToast();
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = (reader.result as string).split(",")[1];
+      try {
+        const res = await apiRequest("POST", "/api/books/ocr", { image: base64 });
+        const data = await res.json();
+        
+        form.setValue("title", data.title || "");
+        form.setValue("author", data.author || "");
+        form.setValue("isbn", data.isbn || "");
+        form.setValue("publisher", data.publisher || "");
+        if (data.yearPublished) {
+          form.setValue("yearPublished", parseInt(data.yearPublished.toString()));
+        }
+
+        toast({
+          title: "Dados extraídos!",
+          description: "As informações da capa foram preenchidas automaticamente.",
+        });
+      } catch (error: any) {
+        toast({
+          title: "Erro no OCR",
+          description: error.message || "Não foi possível extrair os dados da imagem.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsScanning(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const { data: books, isLoading } = useQuery<any[]>({
     queryKey: searchQuery ? ["/api/books", { search: searchQuery }] : ["/api/books"],
@@ -112,9 +150,31 @@ export default function Books() {
             <DialogHeader>
               <DialogTitle>Cadastrar Novo Livro</DialogTitle>
               <DialogDescription>
-                Preencha os dados do livro para adicionar ao acervo
+                Preencha os dados do livro ou tire uma foto da capa para preenchimento automático
               </DialogDescription>
             </DialogHeader>
+
+            <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg mb-4 bg-muted/50">
+              {isScanning ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm font-medium">Analisando capa do livro...</p>
+                </div>
+              ) : (
+                <>
+                  <Camera className="h-8 w-8 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground mb-2 text-center">Capture ou envie uma foto da capa para extrair os dados</p>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="max-w-xs"
+                    data-testid="input-ocr-camera"
+                  />
+                </>
+              )}
+            </div>
+
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField

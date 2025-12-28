@@ -2,6 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertBookSchema, insertUserSchema, insertLoanSchema, insertReservationSchema, insertFineSchema, insertCategorySchema } from "@shared/schema";
+import { registerChatRoutes } from "./replit_integrations/chat";
+import { registerImageRoutes } from "./replit_integrations/image";
+import { openai } from "./replit_integrations/image/client";
 
 // Business rules constants
 const LOAN_RULES = {
@@ -906,6 +909,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Renovação rejeitada" });
     } catch (error) {
       res.status(500).json({ message: "Erro ao rejeitar renovação" });
+    }
+  });
+
+  registerChatRoutes(app);
+  registerImageRoutes(app);
+
+  app.post("/api/books/ocr", async (req, res) => {
+    try {
+      const { image } = req.body; // base64 image
+      if (!image) {
+        return res.status(400).json({ message: "Imagem é obrigatória" });
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Extraia o título, autor, ISBN (se houver), editora e ano de publicação desta capa de livro. Retorne APENAS um objeto JSON com os campos: title, author, isbn, publisher, yearPublished (número). Se não encontrar algum campo, deixe-o como null ou string vazia." },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${image}`,
+                },
+              },
+            ],
+          },
+        ],
+        response_format: { type: "json_object" },
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error("Falha na extração de dados");
+      }
+
+      res.json(JSON.parse(content));
+    } catch (error: any) {
+      console.error("Erro no OCR:", error);
+      res.status(500).json({ message: "Erro ao processar imagem: " + error.message });
     }
   });
 
