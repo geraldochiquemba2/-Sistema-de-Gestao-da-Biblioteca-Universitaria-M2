@@ -27,112 +27,134 @@ import StaffLoans from "@/pages/staff-loans";
 import BookSearch from "@/pages/book-search";
 import NotFound from "@/pages/not-found";
 
-function AuthenticatedRouter() {
-  return (
-    <Switch>
-      <Route path="/dashboard" component={Dashboard} />
-      <Route path="/books" component={Books} />
-      <Route path="/loans" component={Loans} />
-      <Route path="/users" component={Users} />
-      <Route path="/fines" component={Fines} />
-      <Route path="/reports" component={Reports} />
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
-
-function AuthenticatedLayout() {
-  const { logout } = useAuth();
+function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
+  const { logout, user } = useAuth();
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
   };
 
+  const isAdmin = user?.userType === "admin";
+
   return (
-    <PrivateRoute requiredRole="admin">
-      <SidebarProvider style={style as React.CSSProperties}>
-        <div className="flex h-screen w-full">
-          <AppSidebar />
-          <div className="flex flex-col flex-1 overflow-hidden">
-            <header className="flex items-center justify-between px-6 py-3 border-b bg-background sticky top-0 z-10">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <div className="flex items-center gap-2">
-                <ThemeToggle />
-                <Button variant="outline" onClick={logout} data-testid="button-logout">
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sair
-                </Button>
-              </div>
-            </header>
-            <main className="flex-1 overflow-auto">
-              <AuthenticatedRouter />
-            </main>
-          </div>
+    <SidebarProvider style={style as React.CSSProperties}>
+      <div className="flex h-screen w-full">
+        <AppSidebar />
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <header className="flex items-center justify-between px-6 py-3 border-b bg-background sticky top-0 z-10">
+            <SidebarTrigger data-testid="button-sidebar-toggle" />
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <Button variant="outline" onClick={logout} data-testid="button-logout">
+                <LogOut className="h-4 w-4 mr-2" />
+                Sair
+              </Button>
+            </div>
+          </header>
+          <main className="flex-1 overflow-auto">
+            {children}
+          </main>
         </div>
-      </SidebarProvider>
-    </PrivateRoute>
+      </div>
+    </SidebarProvider>
   );
 }
 
 function Router() {
   const [location] = useLocation();
-  const isPublicPage = location === "/" || location === "/login";
-  const isStudentPage = location.startsWith("/student");
-  const isTeacherPage = location.startsWith("/teacher");
-  const isStaffPage = location.startsWith("/staff");
 
   return (
     <Switch>
       <Route path="/" component={Welcome} />
       <Route path="/login" component={Login} />
-      <Route path="/student/dashboard">
+      
+      {/* Student Routes */}
+      <Route path="/student/:rest*">
         <PrivateRoute requiredRole="student">
-          <StudentDashboard />
+          <AuthenticatedLayout>
+            <Switch>
+              <Route path="/student/dashboard" component={StudentDashboard} />
+              <Route path="/student/loans" component={StudentLoans} />
+              <Route path="/student/books" component={BookSearch} />
+              <Route component={NotFound} />
+            </Switch>
+          </AuthenticatedLayout>
         </PrivateRoute>
       </Route>
-      <Route path="/student/loans">
-        <PrivateRoute requiredRole="student">
-          <StudentLoans />
-        </PrivateRoute>
-      </Route>
-      <Route path="/student/books">
-        <PrivateRoute requiredRole="student">
-          <BookSearch />
-        </PrivateRoute>
-      </Route>
-      <Route path="/teacher/dashboard">
+
+      {/* Teacher Routes */}
+      <Route path="/teacher/:rest*">
         <PrivateRoute requiredRole="teacher">
-          <TeacherDashboard />
+          <AuthenticatedLayout>
+            <Switch>
+              <Route path="/teacher/dashboard" component={TeacherDashboard} />
+              <Route path="/teacher/loans" component={TeacherLoans} />
+              <Route path="/teacher/books" component={BookSearch} />
+              <Route component={NotFound} />
+            </Switch>
+          </AuthenticatedLayout>
         </PrivateRoute>
       </Route>
-      <Route path="/teacher/loans">
-        <PrivateRoute requiredRole="teacher">
-          <TeacherLoans />
-        </PrivateRoute>
-      </Route>
-      <Route path="/teacher/books">
-        <PrivateRoute requiredRole="teacher">
-          <BookSearch />
-        </PrivateRoute>
-      </Route>
-      <Route path="/staff/dashboard">
+
+      {/* Staff Routes */}
+      <Route path="/staff/:rest*">
         <PrivateRoute requiredRole="staff">
-          <StaffDashboard />
+          <AuthenticatedLayout>
+            <Switch>
+              <Route path="/staff/dashboard" component={StaffDashboard} />
+              <Route path="/staff/loans" component={StaffLoans} />
+              <Route path="/staff/books" component={BookSearch} />
+              <Route component={NotFound} />
+            </Switch>
+          </AuthenticatedLayout>
         </PrivateRoute>
       </Route>
-      <Route path="/staff/loans">
-        <PrivateRoute requiredRole="staff">
-          <StaffLoans />
+
+      {/* Admin Routes */}
+      <Route path="/dashboard">
+        <PrivateRoute requiredRole="admin">
+          <AuthenticatedLayout>
+            <Dashboard />
+          </AuthenticatedLayout>
         </PrivateRoute>
       </Route>
-      <Route path="/staff/books">
-        <PrivateRoute requiredRole="staff">
-          <BookSearch />
+      <Route path="/books">
+        <PrivateRoute requiredRole="admin">
+          <AuthenticatedLayout>
+            <Books />
+          </AuthenticatedLayout>
         </PrivateRoute>
       </Route>
-      <Route>
-        {isPublicPage || isStudentPage || isTeacherPage || isStaffPage ? <NotFound /> : <AuthenticatedLayout />}
+      <Route path="/loans">
+        <PrivateRoute requiredRole="admin">
+          <AuthenticatedLayout>
+            <Loans />
+          </AuthenticatedLayout>
+        </PrivateRoute>
       </Route>
+      <Route path="/users">
+        <PrivateRoute requiredRole="admin">
+          <AuthenticatedLayout>
+            <Users />
+          </AuthenticatedLayout>
+        </PrivateRoute>
+      </Route>
+      <Route path="/fines">
+        <PrivateRoute requiredRole="admin">
+          <AuthenticatedLayout>
+            <Fines />
+          </AuthenticatedLayout>
+        </PrivateRoute>
+      </Route>
+      <Route path="/reports">
+        <PrivateRoute requiredRole="admin">
+          <AuthenticatedLayout>
+            <Reports />
+          </AuthenticatedLayout>
+        </PrivateRoute>
+      </Route>
+
+      <Route component={NotFound} />
     </Switch>
   );
 }

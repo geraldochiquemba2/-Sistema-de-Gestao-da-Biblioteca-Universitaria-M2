@@ -5,6 +5,7 @@ import {
   FileText,
   LayoutDashboard,
   AlertCircle,
+  Search,
 } from "lucide-react";
 import {
   Sidebar,
@@ -18,42 +19,70 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
-
-const menuItems = [
-  {
-    title: "Painel Principal",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Catálogo de Livros",
-    url: "/books",
-    icon: BookOpen,
-  },
-  {
-    title: "Gestão de Empréstimos",
-    url: "/loans",
-    icon: BookCopy,
-  },
-  {
-    title: "Utilizadores",
-    url: "/users",
-    icon: Users,
-  },
-  {
-    title: "Multas",
-    url: "/fines",
-    icon: AlertCircle,
-  },
-  {
-    title: "Relatórios",
-    url: "/reports",
-    icon: FileText,
-  },
-];
+import { useAuth } from "@/contexts/AuthContext";
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { user } = useAuth();
+
+  const getMenuItems = () => {
+    if (user?.userType === "student") {
+      return [
+        { title: "Dashboard", url: "/student/dashboard", icon: LayoutDashboard },
+        { title: "Meus Empréstimos", url: "/student/loans", icon: BookCopy },
+        { title: "Pesquisar Livros", url: "/student/books", icon: Search },
+      ];
+    }
+    if (user?.userType === "teacher") {
+      return [
+        { title: "Dashboard", url: "/teacher/dashboard", icon: LayoutDashboard },
+        { title: "Meus Empréstimos", url: "/teacher/loans", icon: BookCopy },
+        { title: "Pesquisar Livros", url: "/teacher/books", icon: Search },
+      ];
+    }
+    if (user?.userType === "staff") {
+      return [
+        { title: "Dashboard", url: "/staff/dashboard", icon: LayoutDashboard },
+        { title: "Meus Empréstimos", url: "/staff/loans", icon: BookCopy },
+        { title: "Pesquisar Livros", url: "/staff/books", icon: Search },
+      ];
+    }
+    // Admin menu items
+    return [
+      {
+        title: "Painel Principal",
+        url: "/dashboard",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Catálogo de Livros",
+        url: "/books",
+        icon: BookOpen,
+      },
+      {
+        title: "Gestão de Empréstimos",
+        url: "/loans",
+        icon: BookCopy,
+      },
+      {
+        title: "Utilizadores",
+        url: "/users",
+        icon: Users,
+      },
+      {
+        title: "Multas",
+        url: "/fines",
+        icon: AlertCircle,
+      },
+      {
+        title: "Relatórios",
+        url: "/reports",
+        icon: FileText,
+      },
+    ];
+  };
+
+  const menuItems = getMenuItems();
 
   return (
     <Sidebar>
