@@ -109,9 +109,34 @@ export default function Books() {
           form.setValue("description", data.description);
         }
 
+        // Se encontrou um título, faz a busca na web para complementar dados
+        if (data.title) {
+          toast({
+            title: "Capa reconhecida!",
+            description: "Buscando informações complementares na internet...",
+          });
+          
+          try {
+            const webRes = await apiRequest("POST", "/api/books/web-search", { title: data.title });
+            const webData = await webRes.json();
+            
+            if (webData) {
+              if (!form.getValues("author")) form.setValue("author", webData.author || "");
+              if (!form.getValues("isbn")) form.setValue("isbn", webData.isbn || "");
+              if (!form.getValues("publisher")) form.setValue("publisher", webData.publisher || "");
+              if (!form.getValues("yearPublished") && webData.yearPublished) {
+                form.setValue("yearPublished", parseInt(webData.yearPublished.toString()));
+              }
+              if (!form.getValues("description")) form.setValue("description", webData.description || "");
+            }
+          } catch (webErr) {
+            console.error("Erro na busca complementar:", webErr);
+          }
+        }
+
         toast({
-          title: "Dados extraídos!",
-          description: "As informações da capa foram preenchidas automaticamente.",
+          title: "Dados processados!",
+          description: "As informações foram extraídas e complementadas via internet.",
         });
       } catch (error: any) {
         toast({
