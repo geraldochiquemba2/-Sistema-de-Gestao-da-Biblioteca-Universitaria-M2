@@ -2,9 +2,12 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertBookSchema, insertUserSchema, insertLoanSchema, insertReservationSchema, insertFineSchema, insertCategorySchema } from "@shared/schema";
-import { registerChatRoutes } from "./replit_integrations/chat";
-import { registerImageRoutes } from "./replit_integrations/image";
-import { openai } from "./replit_integrations/image/client";
+import OpenAI from "openai";
+
+const openai = new OpenAI({ 
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL
+});
 
 // Business rules constants
 const LOAN_RULES = {
@@ -633,7 +636,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard stats
   app.get("/api/dashboard/stats", async (req, res) => {
     try {
       const books = await storage.getAllBooks();
@@ -657,6 +659,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar estatísticas" });
+    }
+  });
+
+  app.post("/api/books/ocr", async (req, res) => {
+    try {
+      const { image } = req.body;
+      if (!image) {
+        return res.status(400).json({ message: "Imagem não fornecida" });
+      }
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Extraia os seguintes dados desta capa de livro em formato JSON: title, author, isbn, publisher, yearPublished. Se não encontrar algum campo, deixe vazio." },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${image}`,
+                },
+              },
+            ],
+          },
+        ],
+        response_format: { type: "json_object" },
+      });
+
+      const content = response.choices[0].message.content;
+      if (!content) {
+        throw new Error("Falha ao extrair dados da imagem");
+      }
+
+      res.json(JSON.parse(content));
+    } catch (error: any) {
+      console.error("OCR Error:", error);
+      res.status(500).json({ message: "Erro ao processar imagem: " + error.message });
     }
   });
 
@@ -912,8 +952,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  registerChatRoutes(app);
-  registerImageRoutes(app);
 
   app.post("/api/books/ocr", async (req, res) => {
     try {
