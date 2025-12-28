@@ -700,6 +700,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/books/web-search", async (req, res) => {
+    try {
+      const { title } = req.body;
+      if (!title) {
+        return res.status(400).json({ message: "Título não fornecido" });
+      }
+
+      const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(title)}&maxResults=1`);
+      const data = await response.json();
+
+      if (!data.items || data.items.length === 0) {
+        return res.status(404).json({ message: "Nenhum livro encontrado na internet." });
+      }
+
+      const volumeInfo = data.items[0].volumeInfo;
+      const isbnObj = volumeInfo.industryIdentifiers?.find((id: any) => id.type === "ISBN_13") || volumeInfo.industryIdentifiers?.[0];
+
+      res.json({
+        title: volumeInfo.title,
+        author: volumeInfo.authors?.join(", "),
+        isbn: isbnObj?.identifier,
+        publisher: volumeInfo.publisher,
+        yearPublished: volumeInfo.publishedDate ? parseInt(volumeInfo.publishedDate.split("-")[0]) : null,
+        description: volumeInfo.description,
+        categories: volumeInfo.categories?.join(", ")
+      });
+    } catch (error: any) {
+      console.error("Web Search Error:", error);
+      res.status(500).json({ message: "Erro ao pesquisar na internet: " + error.message });
+    }
+  });
+
   // Reports
   app.get("/api/reports/popular-books", async (req, res) => {
     try {

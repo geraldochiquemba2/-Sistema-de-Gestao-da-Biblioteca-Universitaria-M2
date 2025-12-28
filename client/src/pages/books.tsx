@@ -40,7 +40,50 @@ export default function Books() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [isSearchingWeb, setIsSearchingWeb] = useState(false);
   const { toast } = useToast();
+
+  const handleWebSearch = async () => {
+    const title = form.getValues("title");
+    if (!title) {
+      toast({
+        title: "Título necessário",
+        description: "Digite o título do livro para pesquisar na internet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSearchingWeb(true);
+    try {
+      const res = await apiRequest("POST", "/api/books/web-search", { title });
+      const data = await res.json();
+      
+      if (data) {
+        form.setValue("title", data.title || form.getValues("title"));
+        form.setValue("author", data.author || "");
+        form.setValue("isbn", data.isbn || "");
+        form.setValue("publisher", data.publisher || "");
+        if (data.yearPublished) {
+          form.setValue("yearPublished", parseInt(data.yearPublished.toString()));
+        }
+        form.setValue("description", data.description || "");
+
+        toast({
+          title: "Informações encontradas!",
+          description: "Os dados foram recuperados da internet.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro na pesquisa",
+        description: error.message || "Não foi possível encontrar informações para este livro.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearchingWeb(false);
+    }
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -161,17 +204,35 @@ export default function Books() {
                   <p className="text-sm font-medium">Analisando capa do livro...</p>
                 </div>
               ) : (
-                <>
-                  <Camera className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground mb-2 text-center">Capture ou envie uma foto da capa para extrair os dados</p>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="max-w-xs"
-                    data-testid="input-ocr-camera"
-                  />
-                </>
+                <div className="flex flex-col items-center w-full gap-4">
+                  <div className="flex flex-col items-center">
+                    <Camera className="h-8 w-8 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground mb-2 text-center">Capture ou envie uma foto da capa para extrair os dados</p>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="max-w-xs"
+                      data-testid="input-ocr-camera"
+                    />
+                  </div>
+                  <div className="w-full flex items-center gap-2">
+                    <div className="h-[1px] flex-1 bg-border" />
+                    <span className="text-xs text-muted-foreground uppercase">Ou</span>
+                    <div className="h-[1px] flex-1 bg-border" />
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={handleWebSearch}
+                    disabled={isSearchingWeb}
+                    data-testid="button-web-search"
+                  >
+                    {isSearchingWeb ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                    Pesquisar dados na Internet pelo Título
+                  </Button>
+                </div>
               )}
             </div>
 
