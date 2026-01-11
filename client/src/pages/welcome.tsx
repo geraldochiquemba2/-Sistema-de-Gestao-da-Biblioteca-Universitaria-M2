@@ -22,8 +22,6 @@ export default function Welcome() {
 
   const carouselImages = [
     "https://www.isptec.co.ao/public/assets/img/uploads/img-2597461014.jpeg",
-    "https://scontent.flad5-1.fna.fbcdn.net/v/t39.30808-6/474685231_7537366406387327_4344414854034230848_n.jpg?_nc_cat=102&ccb=1-7&_nc_sid=3a1ebe&_nc_eui2=AeGrDWjWbH3E8cYV0oQbwLEs7zytRnucbiTvPK1Ge5xuJM6ff8z-JWlQJO4Fp4952L52Y2ybByJwMVPRm7ZM3jSo&_nc_ohc=n0tcU46mcWwQ7kNvwGMNPgn&_nc_oc=AdnslNiOy_2cA_VkRk-2cXfEpGnLbyTH6rIliaZMBCThf0LEDAsOyFevjJiUn88VcCA&_nc_zt=23&_nc_ht=scontent.flad5-1.fna&_nc_gid=o4jsX3UnbuQw_mu48mDBEQ&oh=00_AfiMhAZC7DvX2ABoD1U6O_rU-aVLJjCYozTWZzdz-VCsmQ&oe=691FAE7A",
-    "https://scontent.flad5-1.fna.fbcdn.net/v/t39.30808-6/474621421_7537366189720682_8005053412394855097_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=3a1ebe&_nc_eui2=AeH2zvLGbR7999s7_XJwpSCG2mnUgTyeVFvaadSBPJ5UWwwm1-kfKc589gaZdTqEj35s-g_BXpPboJx1IOIGA2OK&_nc_ohc=4Yyg2oDjD2wQ7kNvwGVTAB_&_nc_oc=AdliOzc6XoG1RW4FLkDtkIzph04gN7DqISUqVheFioa-lZw_P8jSMVR_V4eS561FksI&_nc_zt=23&_nc_ht=scontent.flad5-1.fna&_nc_gid=6VfQg0BCoOWPgzTDWcg7rw&oh=00_Afg9jFMWL1C9JJrTQa04hPPMk_OlvPKKS0tStmSOLtUnVA&oe=691FC20A",
     "https://www.isptec.co.ao/public/assets/img/uploads/img-1888091388.jpeg",
     "https://www.menosfios.com/wp-content/uploads/2023/09/img-3436081329-scaled.jpeg",
   ];
