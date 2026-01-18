@@ -34,6 +34,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, user: Partial<InsertUser>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
+  deleteUser(id: string): Promise<boolean>;
 
   // Book methods
   getBook(id: string): Promise<Book | undefined>;
@@ -57,6 +58,7 @@ export interface IStorage {
   getOverdueLoans(): Promise<Loan[]>;
   createLoan(loan: InsertLoan): Promise<Loan>;
   updateLoan(id: string, loan: Partial<InsertLoan>): Promise<Loan | undefined>;
+  deleteLoan(id: string): Promise<boolean>;
 
   // Reservation methods
   getReservation(id: string): Promise<Reservation | undefined>;
@@ -118,6 +120,11 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const [deletedUser] = await db.delete(users).where(eq(users.id, id)).returning();
+    return !!deletedUser;
   }
 
   // Book methods
@@ -216,6 +223,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(loans.id, id))
       .returning();
     return updatedLoan;
+  }
+
+  async deleteLoan(id: string): Promise<boolean> {
+    const [deletedLoan] = await db.delete(loans).where(eq(loans.id, id)).returning();
+    return !!deletedLoan;
   }
 
   // Reservation methods

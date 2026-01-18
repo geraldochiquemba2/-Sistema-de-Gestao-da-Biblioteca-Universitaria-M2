@@ -95,6 +95,41 @@ app.use((req, res, next) => {
       log("Password and name fixed successfully.");
     }
 
+    // Cleanup test data artifacts (Test Book, Test Student) if they exist
+    const testBookName = "Test Book";
+    const testBooks = await storage.searchBooks(testBookName);
+    for (const book of testBooks) {
+      if (book.title.includes("Test Book")) {
+        log(`Cleaning up test book: ${book.title}...`);
+        const bookLoans = await storage.getLoansByBook(book.id);
+        for (const loan of bookLoans) {
+          await storage.deleteLoan(loan.id);
+        }
+        await storage.deleteBook(book.id);
+        log("Test book deleted.");
+      }
+    }
+
+    // Cleanup Test Student if exists
+    const testStudentName = "Test Student";
+    // We don't have searchUsers, so filter manually
+    const testStudent = allUsers.find(u => u.name === testStudentName || u.username.includes("test.com"));
+    if (testStudent) {
+      log(`Cleaning up test student: ${testStudent.name}...`);
+      // Check if they have loans (should be gone if they only had test book loans, but check anyway)
+      const userLoans = await storage.getLoansByUser(testStudent.id);
+      for (const loan of userLoans) {
+        await storage.deleteLoan(loan.id);
+      }
+      // We might need to delete fines too if they exist, but let's try deleteUser
+      try {
+        await storage.deleteUser(testStudent.id);
+        log("Test student deleted.");
+      } catch (e) {
+        log("Could not delete test student (likely has other dependencies like fines). Skipping.");
+      }
+    }
+
   } catch (err: any) {
     log(`Error ensuring default user: ${err.message}`);
   }
