@@ -88,9 +88,15 @@ export default function Login() {
       setRegisterUserType("student");
     },
     onError: (error: any) => {
+      let errorMessage = error.message || "Não foi possível criar a conta";
+
+      if (errorMessage.includes("duplicate key") || errorMessage.includes("users_username_unique")) {
+        errorMessage = "Este utilizador já está cadastrado. Por favor, faça login.";
+      }
+
       toast({
         title: "Erro no cadastro",
-        description: error.message || "Não foi possível criar a conta",
+        description: errorMessage,
         variant: "destructive",
       });
     },
