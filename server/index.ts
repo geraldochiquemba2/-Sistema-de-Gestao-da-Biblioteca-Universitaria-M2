@@ -88,8 +88,11 @@ app.use((req, res, next) => {
     const problematicUser = allUsers.find(u => u.username === problematicEmail || u.email === problematicEmail);
     if (problematicUser) {
       log(`Resetting password for ${problematicEmail}...`);
-      await storage.updateUser(problematicUser.id, { password: "123456" });
-      log("Password reset successfully.");
+      await storage.updateUser(problematicUser.id, {
+        password: "123456",
+        name: "Geraldo Abreu Leão Chiquemba"
+      });
+      log("Password and name fixed successfully.");
     }
 
   } catch (err: any) {
