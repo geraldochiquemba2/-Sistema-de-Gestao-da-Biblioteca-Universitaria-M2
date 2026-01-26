@@ -12,61 +12,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, DollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format, subDays } from "date-fns";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
-//todo: remove mock functionality
-const mockFines = [
-  {
-    id: "1",
-    userName: "Ana Kiluange",
-    userEmail: "ana.kiluange@isptec.ao",
-    bookTitle: "Banco de Dados: Conceitos e Projeto",
-    daysOverdue: 5,
-    amount: 2500,
-    status: "pending" as const,
-    dueDate: subDays(new Date(), 5),
-  },
-  {
-    id: "2",
-    userName: "Pedro Sakaita",
-    userEmail: "pedro.sakaita@isptec.ao",
-    bookTitle: "Segurança de Computadores",
-    daysOverdue: 4,
-    amount: 2000,
-    status: "pending" as const,
-    dueDate: subDays(new Date(), 4),
-  },
-  {
-    id: "3",
-    userName: "Luísa Mendes",
-    userEmail: "luisa.mendes@isptec.ao",
-    bookTitle: "Inteligência Artificial Moderna",
-    daysOverdue: 2,
-    amount: 1000,
-    status: "pending" as const,
-    dueDate: subDays(new Date(), 2),
-  },
-  {
-    id: "4",
-    userName: "Roberto Silva",
-    userEmail: "roberto.silva@isptec.ao",
-    bookTitle: "Redes de Computadores - 5ª Edição",
-    daysOverdue: 3,
-    amount: 1500,
-    status: "paid" as const,
-    dueDate: subDays(new Date(), 15),
-  },
-  {
-    id: "5",
-    userName: "Teresa Costa",
-    userEmail: "teresa.costa@isptec.ao",
-    bookTitle: "Sistemas Operacionais Modernos",
-    daysOverdue: 1,
-    amount: 500,
-    status: "paid" as const,
-    dueDate: subDays(new Date(), 12),
-  },
-];
+interface Fine {
+  id: string;
+  userId: string;
+  loanId: string;
+  amount: string;
+  daysOverdue: number;
+  status: "pending" | "paid";
+  paymentDate: Date | null;
+  createdAt: Date;
+}
 
 const statusConfig = {
   pending: { text: "Pendente", color: "bg-chart-3 text-white" },
@@ -75,20 +34,40 @@ const statusConfig = {
 
 export default function Fines() {
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
 
-  const filteredFines = mockFines.filter(
-    (fine) =>
-      fine.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      fine.userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      fine.bookTitle.toLowerCase().includes(searchQuery.toLowerCase())
+  const { data: fines, isLoading } = useQuery<Fine[]>({
+    queryKey: ["/api/fines"],
+  });
+
+  const payFineMutation = useMutation({
+    mutationFn: async (fineId: string) => {
+      return apiRequest("POST", `/api/fines/${fineId}/pay`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/fines"] });
+      toast({ title: "Multa paga com sucesso!" });
+    },
+    onError: () => {
+      toast({ title: "Erro ao pagar multa", variant: "destructive" });
+    },
+  });
+
+  const filteredFines = (fines || []).filter(
+    (fine) => searchQuery === "" // Show all for now
   );
 
-  const totalPending = mockFines
+  const totalPending = (fines || [])
     .filter((f) => f.status === "pending")
-    .reduce((sum, f) => sum + f.amount, 0);
-  const totalPaid = mockFines
+    .reduce((sum, f) => sum + parseFloat(f.amount), 0);
+
+  const totalPaid = (fines || [])
     .filter((f) => f.status === "paid")
-    .reduce((sum, f) => sum + f.amount, 0);
+    .reduce((sum, f) => sum + parseFloat(f.amount), 0);
+
+  const blockedUsers = (fines || [])
+    .filter((f) => f.status === "pending" && parseFloat(f.amount) >= 2000)
+    .length;
 
   return (
     <div className="flex-1 space-y-6 p-6">
@@ -108,7 +87,7 @@ export default function Fines() {
           <CardContent>
             <div className="text-2xl font-bold text-destructive">{totalPending.toLocaleString()} Kz</div>
             <p className="text-xs text-muted-foreground mt-1">
-              De {mockFines.filter((f) => f.status === "pending").length} utilizadores
+              De {(fines || []).filter((f) => f.status === "pending").length} utilizadores
             </p>
           </CardContent>
         </Card>
@@ -130,7 +109,7 @@ export default function Fines() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1</div>
+            <div className="text-2xl font-bold">{blockedUsers}</div>
             <p className="text-xs text-muted-foreground mt-1">Multas &gt; 2.000 Kz</p>
           </CardContent>
         </Card>
@@ -151,9 +130,8 @@ export default function Fines() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Utilizador</TableHead>
-              <TableHead>Título do Livro</TableHead>
-              <TableHead>Data de Devolução</TableHead>
+              <TableHead>Utilizador ID</TableHead>
+              <TableHead>Empréstimo ID</TableHead>
               <TableHead>Dias de Atraso</TableHead>
               <TableHead>Valor</TableHead>
               <TableHead>Estado</TableHead>
@@ -161,9 +139,15 @@ export default function Fines() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredFines.length === 0 ? (
+            {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  Carregando multas...
+                </TableCell>
+              </TableRow>
+            ) : filteredFines.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                   Nenhuma multa encontrada
                 </TableCell>
               </TableRow>
@@ -171,18 +155,16 @@ export default function Fines() {
               filteredFines.map((fine) => (
                 <TableRow key={fine.id} data-testid={`row-fine-${fine.id}`}>
                   <TableCell>
-                    <div>
-                      <div className="font-medium" data-testid={`text-user-${fine.id}`}>{fine.userName}</div>
-                      <div className="text-sm text-muted-foreground">{fine.userEmail}</div>
-                    </div>
+                    <div className="font-medium" data-testid={`text-user-${fine.id}`}>{fine.userId}</div>
                   </TableCell>
-                  <TableCell data-testid={`text-book-${fine.id}`}>{fine.bookTitle}</TableCell>
-                  <TableCell>{format(fine.dueDate, "dd/MM/yyyy")}</TableCell>
+                  <TableCell data-testid={`text-loan-${fine.id}`}>{fine.loanId}</TableCell>
                   <TableCell>
                     <span className="text-destructive font-medium">{fine.daysOverdue} dias</span>
                   </TableCell>
                   <TableCell>
-                    <span className="font-bold" data-testid={`text-amount-${fine.id}`}>{fine.amount.toLocaleString()} Kz</span>
+                    <span className="font-bold" data-testid={`text-amount-${fine.id}`}>
+                      {parseFloat(fine.amount).toLocaleString()} Kz
+                    </span>
                   </TableCell>
                   <TableCell>
                     <Badge className={statusConfig[fine.status].color} data-testid={`badge-status-${fine.id}`}>
@@ -193,10 +175,11 @@ export default function Fines() {
                     {fine.status === "pending" && (
                       <Button
                         size="sm"
-                        onClick={() => console.log("Marcar como pago:", fine.id)}
+                        onClick={() => payFineMutation.mutate(fine.id)}
+                        disabled={payFineMutation.isPending}
                         data-testid={`button-mark-paid-${fine.id}`}
                       >
-                        Marcar como Pago
+                        {payFineMutation.isPending ? "Processando..." : "Marcar como Pago"}
                       </Button>
                     )}
                   </TableCell>
