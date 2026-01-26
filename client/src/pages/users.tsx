@@ -101,9 +101,10 @@ export default function Users() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os Tipos</SelectItem>
-            <SelectItem value="docente">Docente</SelectItem>
-            <SelectItem value="estudante">Estudante</SelectItem>
-            <SelectItem value="funcionario">Funcionário</SelectItem>
+            <SelectItem value="teacher">Docente</SelectItem>
+            <SelectItem value="student">Estudante</SelectItem>
+            <SelectItem value="staff">Funcionário</SelectItem>
+            <SelectItem value="admin">Administrador</SelectItem>
           </SelectContent>
         </Select>
       </div>
