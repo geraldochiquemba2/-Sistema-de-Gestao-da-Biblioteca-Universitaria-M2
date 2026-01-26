@@ -88,6 +88,43 @@ export default function Repository() {
                 </form>
             </Card>
 
+            {/* Quick Search - African Literature */}
+            <Card className="p-4">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Literatura Africana e Angolana
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setSearchQuery("Pepetela"); setActiveSearch("Pepetela"); }}>
+                        Pepetela
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setSearchQuery("Ondjaki"); setActiveSearch("Ondjaki"); }}>
+                        Ondjaki
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setSearchQuery("José Eduardo Agualusa"); setActiveSearch("José Eduardo Agualusa"); }}>
+                        Agualusa
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setSearchQuery("Luandino Vieira"); setActiveSearch("Luandino Vieira"); }}>
+                        Luandino Vieira
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setSearchQuery("Mia Couto"); setActiveSearch("Mia Couto"); }}>
+                        Mia Couto
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setSearchQuery("Chinua Achebe"); setActiveSearch("Chinua Achebe"); }}>
+                        Chinua Achebe
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setSearchQuery("Chimamanda Adichie"); setActiveSearch("Chimamanda Adichie"); }}>
+                        Chimamanda
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setSearchQuery("Angola literatura"); setActiveSearch("Angola literatura"); }}>
+                        Literatura Angolana
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setSearchQuery("African literature"); setActiveSearch("African literature"); }}>
+                        Literatura Africana
+                    </Button>
+                </div>
+            </Card>
+
             {/* Results */}
             {error ? (
                 <div className="text-center p-8 text-destructive">
