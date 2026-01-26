@@ -25,6 +25,7 @@ import TeacherLoans from "@/pages/teacher-loans";
 import StaffDashboard from "@/pages/staff-dashboard";
 import StaffLoans from "@/pages/staff-loans";
 import BookSearch from "@/pages/book-search";
+import Repository from "@/pages/repository";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
@@ -67,7 +68,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Welcome} />
       <Route path="/login" component={Login} />
-      
+
       {/* Student Routes */}
       <Route path="/student/:rest*">
         <PrivateRoute requiredRole="student">
@@ -150,6 +151,13 @@ function Router() {
         <PrivateRoute requiredRole="admin">
           <AuthenticatedLayout>
             <Reports />
+          </AuthenticatedLayout>
+        </PrivateRoute>
+      </Route>
+      <Route path="/repository">
+        <PrivateRoute requiredRole="admin">
+          <AuthenticatedLayout>
+            <Repository />
           </AuthenticatedLayout>
         </PrivateRoute>
       </Route>

@@ -1137,6 +1137,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // External Book Repository Proxy
+  app.get("/api/external-books", async (req, res) => {
+    try {
+      const { query } = req.query;
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ message: "Termo de busca obrigatório" });
+      }
+
+      // Search for free ebooks on Google Books
+      // filter=free-ebooks ensures we only get public domain/free content
+      const googleRes = await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&filter=free-ebooks&maxResults=20&langRestrict=pt`
+      );
+
+      const data = await googleRes.json();
+
+      const books = (data.items || []).map((item: any) => {
+        const info = item.volumeInfo;
+        const access = item.accessInfo;
+
+        return {
+          id: item.id,
+          title: info.title,
+          authors: info.authors || ["Autor Desconhecido"],
+          publisher: info.publisher,
+          publishedDate: info.publishedDate,
+          description: info.description,
+          pageCount: info.pageCount,
+          categories: info.categories,
+          imageLinks: info.imageLinks,
+          language: info.language,
+          previewLink: info.previewLink,
+          // Prioritize PDF download, then EPUB, then Web Reader
+          downloadLink: access.pdf?.downloadLink || access.epub?.downloadLink || info.previewLink,
+          isPdfAvailable: access.pdf?.isAvailable,
+          isEpubAvailable: access.epub?.isAvailable
+        };
+      });
+
+      res.json(books);
+    } catch (error: any) {
+      console.error("External Search Error:", error);
+      res.status(500).json({ message: "Erro ao buscar no repositório externo" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -79,6 +79,11 @@ export function AppSidebar() {
         url: "/reports",
         icon: FileText,
       },
+      {
+        title: "Repositório Digital",
+        url: "/repository",
+        icon: BookOpen,
+      },
     ];
   };
 
