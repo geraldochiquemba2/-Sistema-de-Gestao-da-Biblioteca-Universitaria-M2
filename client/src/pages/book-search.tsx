@@ -38,10 +38,12 @@ export default function BookSearch() {
     enabled: !!user?.id,
   });
 
-  const { data: userLoanRequests } = useQuery({
+  const { data: userLoanRequests, refetch: refetchRequests } = useQuery({
     queryKey: ["/api/loan-requests", { userId: user?.id }],
     enabled: !!user?.id,
   });
+
+  console.log("Render: userLoanRequests state:", userLoanRequests);
 
   const reserveMutation = useMutation({
     mutationFn: async (bookId: string) => {
@@ -65,6 +67,9 @@ export default function BookSearch() {
       return response.json();
     },
     onSuccess: () => {
+      console.log("Mutation success, refreshing data...");
+      // Explicitly refetch to ensure UI updates immediately
+      refetchRequests();
       queryClient.invalidateQueries({ queryKey: ["/api/loan-requests"] });
       toast({ title: "Solicitação enviada!", description: "Aguarde a aprovação do bibliotecário." });
     },
@@ -78,7 +83,9 @@ export default function BookSearch() {
   const cancelRequestMutation = useMutation({
     mutationFn: async (bookId: string) => {
       // Find the request ID for this book
-      const request = userLoanRequests?.find((r: any) => r.bookId === bookId && r.status === "pending");
+      const request = requestsArray.find((r: any) => r.bookId === bookId && r.status === "pending");
+      console.log("Cancelling request for book:", bookId, "Found request:", request);
+
       if (!request) throw new Error("Solicitação não encontrada");
 
       await apiRequest("DELETE", `/api/loan-requests/${request.id}`);
