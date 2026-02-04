@@ -317,6 +317,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/books", async (req, res) => {
     try {
       const bookData = insertBookSchema.parse(req.body);
+
+      // Check for duplicate ISBN
+      if (bookData.isbn) {
+        const allBooks = await storage.getAllBooks();
+        const existingByIsbn = allBooks.find(b => b.isbn === bookData.isbn);
+        if (existingByIsbn) {
+          return res.status(400).json({ message: `Já existe um livro cadastrado com o ISBN ${bookData.isbn} ("${existingByIsbn.title}")` });
+        }
+      }
+
+      // Check for duplicate Title + Author
+      const allBooks = await storage.getAllBooks();
+      const existingByTitleAuthor = allBooks.find(b =>
+        b.title.toLowerCase() === bookData.title.toLowerCase() &&
+        b.author.toLowerCase() === bookData.author.toLowerCase()
+      );
+
+      if (existingByTitleAuthor) {
+        return res.status(400).json({ message: `Este livro ("${bookData.title}") de ${bookData.author} já está cadastrado no acervo.` });
+      }
+
       const book = await storage.createBook(bookData);
       res.status(201).json(book);
     } catch (error: any) {

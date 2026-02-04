@@ -99,14 +99,26 @@ export default function Books() {
   };
 
   const selectSearchResult = (book: any) => {
-    form.setValue("title", book.title || "");
-    form.setValue("author", book.author || "");
-    form.setValue("isbn", book.isbn || "");
-    form.setValue("publisher", book.publisher || "");
+    form.setValue("title", book.title || "Não Identificado");
+    form.setValue("author", book.author || "Não Identificado");
+    form.setValue("isbn", book.isbn || ""); // Mantemos vazio para evitar erro de duplicado no DB
+    form.setValue("publisher", book.publisher || "Não Identificado");
     if (book.yearPublished) {
       form.setValue("yearPublished", parseInt(book.yearPublished.toString()));
     }
-    form.setValue("description", book.description || "");
+    form.setValue("description", book.description || "Não Identificado");
+
+    // Tentar mapear categoria
+    if (book.categories && categories) {
+      const apiCats = book.categories.toLowerCase().split(",").map((c: any) => c.trim());
+      const matchedCat = categories.find((c: any) =>
+        apiCats.some((ac: any) => ac.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(ac))
+      );
+      if (matchedCat) {
+        form.setValue("categoryId", matchedCat.id);
+      }
+    }
+
     setSearchResults(null);
     toast({
       title: "Dados preenchidos!",
@@ -146,16 +158,29 @@ export default function Books() {
 
           try {
             const webRes = await apiRequest("POST", "/api/books/web-search", { title: data.title });
-            const webData = await webRes.json();
+            const webDataArray = await webRes.json();
+            const webData = Array.isArray(webDataArray) ? webDataArray[0] : null;
 
             if (webData) {
-              if (!form.getValues("author")) form.setValue("author", webData.author || "");
+              if (!form.getValues("author") || form.getValues("author") === "Não Identificado")
+                form.setValue("author", webData.author || "Não Identificado");
               if (!form.getValues("isbn")) form.setValue("isbn", webData.isbn || "");
-              if (!form.getValues("publisher")) form.setValue("publisher", webData.publisher || "");
+              if (!form.getValues("publisher") || form.getValues("publisher") === "Não Identificado")
+                form.setValue("publisher", webData.publisher || "Não Identificado");
               if (!form.getValues("yearPublished") && webData.yearPublished) {
                 form.setValue("yearPublished", parseInt(webData.yearPublished.toString()));
               }
-              if (!form.getValues("description")) form.setValue("description", webData.description || "");
+              if (!form.getValues("description") || form.getValues("description") === "Não Identificado")
+                form.setValue("description", webData.description || "Não Identificado");
+
+              // Mapear categoria se encontrada
+              if (webData.categories && categories && !form.getValues("categoryId")) {
+                const apiCats = webData.categories.toLowerCase().split(",").map((c: any) => c.trim());
+                const matchedCat = categories.find((c: any) =>
+                  apiCats.some((ac: any) => ac.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(ac))
+                );
+                if (matchedCat) form.setValue("categoryId", matchedCat.id);
+              }
             }
           } catch (webErr) {
             console.error("Erro na busca complementar:", webErr);
