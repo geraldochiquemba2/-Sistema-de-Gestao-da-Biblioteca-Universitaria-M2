@@ -961,6 +961,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId, bookId } = req.body;
 
+      // 1. Validate User and Book existence
+      const user = await storage.getUser(userId);
+      const book = await storage.getBook(bookId);
+
+      if (!user) return res.status(404).json({ message: "Utilizador não encontrado" });
+      if (!book) return res.status(404).json({ message: "Livro não encontrado" });
+
+      // 2. Fetch User's current activity
+      const activeLoans = (await storage.getLoansByUser(userId)).filter(l => l.status === "active");
+      const pendingRequests = (await storage.getLoanRequestsByUser(userId)).filter(r => r.status === "pending");
+
+      const totalActive = activeLoans.length + pendingRequests.length;
+
+      // 3. Enforce Role Limits
+      let limit = 2; // Default for student and staff
+      if (user.userType === "teacher") {
+        limit = 4;
+      }
+
+      if (totalActive >= limit) {
+        return res.status(400).json({
+          message: `Limite de empréstimos atingido. Seu limite é de ${limit} livros (incluindo solicitações pendentes).`
+        });
+      }
+
+      // 4. Enforce Duplicate Title Prevention
+      // Check active loans
+      for (const loan of activeLoans) {
+        const loanBook = await storage.getBook(loan.bookId);
+        if (loanBook && loanBook.title === book.title) {
+          return res.status(400).json({
+            message: "Você já possui um exemplar deste livro emprestado."
+          });
+        }
+      }
+
+      // Check pending requests
+      for (const req of pendingRequests) {
+        const reqBook = await storage.getBook(req.bookId);
+        if (reqBook && reqBook.title === book.title) {
+          return res.status(400).json({
+            message: "Você já possui uma solicitação pendente para este título."
+          });
+        }
+      }
+
       const request = await storage.createLoanRequest({
         userId,
         bookId,
