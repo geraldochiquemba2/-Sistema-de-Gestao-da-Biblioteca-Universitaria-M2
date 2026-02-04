@@ -66,10 +66,19 @@ export default function BookSearch() {
       const response = await apiRequest("POST", "/api/loan-requests", { userId: user.id, bookId });
       return response.json();
     },
-    onSuccess: () => {
-      console.log("Mutation success, refreshing data...");
-      // Explicitly refetch to ensure UI updates immediately
-      refetchRequests();
+    onSuccess: (newRequest) => {
+      console.log("Mutation success, updating cache manually:", newRequest);
+
+      // Manually update the cache to ensure instant UI feedback
+      queryClient.setQueryData(
+        ["/api/loan-requests", { userId: user?.id }],
+        (oldData: any) => {
+          const currentData = Array.isArray(oldData) ? oldData : [];
+          return [...currentData, newRequest];
+        }
+      );
+
+      // Also invalidate to accept server state eventually
       queryClient.invalidateQueries({ queryKey: ["/api/loan-requests"] });
       toast({ title: "Solicitação enviada!", description: "Aguarde a aprovação do bibliotecário." });
     },
@@ -90,7 +99,19 @@ export default function BookSearch() {
 
       await apiRequest("DELETE", `/api/loan-requests/${request.id}`);
     },
-    onSuccess: () => {
+    onSuccess: (_, bookId) => {
+      console.log("Cancel success, updating cache manually for book:", bookId);
+
+      // Manually remove from cache
+      queryClient.setQueryData(
+        ["/api/loan-requests", { userId: user?.id }],
+        (oldData: any) => {
+          const currentData = Array.isArray(oldData) ? oldData : [];
+          // Filter out the request corresponding to this book
+          return currentData.filter((r: any) => r.bookId !== bookId);
+        }
+      );
+
       queryClient.invalidateQueries({ queryKey: ["/api/loan-requests"] });
       toast({ title: "Solicitação cancelada", description: "O pedido foi removido." });
     },
