@@ -786,19 +786,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Título não fornecido" });
       }
 
-      // Pesquisa no Google Books priorizando resultados em Português
-      let response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(title)}&maxResults=5`);
-      let data = await response.json();
+      let data: any = { items: [] };
+      const searchVariants = [
+        title,
+        `intitle:${title}`,
+        title.split(' ').slice(0, 3).join(' '), // Primeiras 3 palavras
+        title.replace(/\d+/g, '').trim()        // Sem números
+      ].filter((q, i, self) => q && q.trim().length > 2 && self.indexOf(q) === i);
 
-      if (!data.items || data.items.length === 0) {
-        // Tenta uma busca mais ampla
-        const broaderQuery = title;
-        const fallbackResponse = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(broaderQuery)}&maxResults=5`);
-        data = await fallbackResponse.json();
+      for (const query of searchVariants) {
+        try {
+          const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=5`, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (LibraryManagementSystem/1.0)' }
+          });
+          const result = await response.json();
+          if (result.items && result.items.length > 0) {
+            data = result;
+            break;
+          }
+        } catch (err) {
+          console.error(`Search variation failed for query "${query}":`, err);
+        }
       }
 
       if (!data.items || data.items.length === 0) {
-        return res.status(404).json({ message: "Nenhum livro encontrado na internet." });
+        return res.status(404).json({ message: "Nenhum livro encontrado na internet com este título." });
       }
 
       const results = data.items.map((item: any) => {
