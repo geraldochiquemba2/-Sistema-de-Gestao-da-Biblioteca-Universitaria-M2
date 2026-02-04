@@ -796,21 +796,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const query of searchVariants) {
         try {
-          const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=5`, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (LibraryManagementSystem/1.0)' }
-          });
+          console.log(`Attempting search for query: "${query}"`);
+          const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=10&langRestrict=pt`);
           const result = await response.json();
+          console.log(`Search result for "${query}": Found ${result.items?.length || 0} items`);
+
           if (result.items && result.items.length > 0) {
             data = result;
             break;
           }
-        } catch (err) {
-          console.error(`Search variation failed for query "${query}":`, err);
+        } catch (err: any) {
+          console.error(`Search variation failed for query "${query}":`, err.message);
         }
       }
 
       if (!data.items || data.items.length === 0) {
-        return res.status(404).json({ message: "Nenhum livro encontrado na internet [v4]. Tente outro termo." });
+        return res.status(404).json({ message: `Não encontramos nada para "${title}" [v5]. Tente outro título ou autor mais específico.` });
       }
 
       const results = data.items.map((item: any) => {
