@@ -24,7 +24,7 @@ export default function BookSearch() {
   if (selectedDepartment !== "all") params.append("department", selectedDepartment);
   if (selectedCategory !== "all") params.append("categoryId", selectedCategory);
   const queryString = params.toString();
-  
+
   const { data: books, isLoading: booksLoading } = useQuery({
     queryKey: ["/api/books", queryString],
   });
@@ -38,30 +38,38 @@ export default function BookSearch() {
     enabled: !!user?.id,
   });
 
+  const { data: userLoanRequests } = useQuery({
+    queryKey: ["/api/loan-requests", { userId: user?.id }],
+    enabled: !!user?.id,
+  });
+
   const reserveMutation = useMutation({
     mutationFn: async (bookId: string) => {
-      if (!user?.id) {
-        throw new Error("Usuário não autenticado");
-      }
-      const response = await apiRequest("POST", "/api/reservations", {
-        userId: user.id,
-        bookId,
-      });
+      if (!user?.id) throw new Error("Usuário não autenticado");
+      const response = await apiRequest("POST", "/api/reservations", { userId: user.id, bookId });
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
-      toast({
-        title: "Reserva realizada com sucesso!",
-        description: "Você será notificado quando o livro estiver disponível",
-      });
+      toast({ title: "Reserva realizada!", description: "Você será notificado quando o livro estiver disponível." });
     },
     onError: (error: any) => {
-      toast({
-        title: "Erro ao fazer reserva",
-        description: error.message || "Não foi possível fazer a reserva",
-        variant: "destructive",
-      });
+      toast({ title: "Erro na reserva", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const requestLoanMutation = useMutation({
+    mutationFn: async (bookId: string) => {
+      if (!user?.id) throw new Error("Usuário não autenticado");
+      const response = await apiRequest("POST", "/api/loan-requests", { userId: user.id, bookId });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/loan-requests"] });
+      toast({ title: "Solicitação enviada!", description: "Aguarde a aprovação do bibliotecário." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro na solicitação", description: error.message, variant: "destructive" });
     },
   });
 
@@ -70,10 +78,17 @@ export default function BookSearch() {
   const booksArray = Array.isArray(books) ? books : [];
   const categoriesArray = Array.isArray(categories) ? categories : [];
   const reservationsArray = Array.isArray(userReservations) ? userReservations : [];
-  
+  const requestsArray = Array.isArray(userLoanRequests) ? userLoanRequests : [];
+
   const hasActiveReservation = (bookId: string) => {
     return reservationsArray.some(
       (r: any) => r.bookId === bookId && (r.status === "pending" || r.status === "notified")
+    );
+  };
+
+  const hasPendingRequest = (bookId: string) => {
+    return requestsArray.some(
+      (r: any) => r.bookId === bookId && r.status === "pending"
     );
   };
 
@@ -100,8 +115,8 @@ export default function BookSearch() {
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={() => window.history.back()}
               data-testid="button-back"
             >
@@ -183,7 +198,7 @@ export default function BookSearch() {
             {booksArray.map((book: any) => {
               const category = categoriesArray.find((c: any) => c.id === book.categoryId);
               const alreadyReserved = hasActiveReservation(book.id);
-              
+
               return (
                 <Card key={book.id} data-testid={`card-book-${book.id}`}>
                   <CardHeader>
@@ -218,16 +233,25 @@ export default function BookSearch() {
                         )}
                       </span>
                     </div>
-                    {book.availableCopies === 0 && (
+                    {book.availableCopies === 0 ? (
                       <Button
                         className="w-full"
-                        variant={alreadyReserved ? "outline" : "default"}
+                        variant={alreadyReserved ? "outline" : "secondary"}
                         onClick={() => !alreadyReserved && reserveMutation.mutate(book.id)}
                         disabled={reserveMutation.isPending || alreadyReserved}
-                        data-testid={`button-reserve-${book.id}`}
                       >
                         <Calendar className="h-4 w-4 mr-2" />
-                        {alreadyReserved ? "Já reservado" : "Reservar"}
+                        {alreadyReserved ? "Na Lista de Espera" : "Entrar na Lista de Espera"}
+                      </Button>
+                    ) : (
+                      <Button
+                        className="w-full"
+                        variant={hasPendingRequest(book.id) ? "outline" : "default"}
+                        onClick={() => !hasPendingRequest(book.id) && requestLoanMutation.mutate(book.id)}
+                        disabled={requestLoanMutation.isPending || hasPendingRequest(book.id)}
+                      >
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        {hasPendingRequest(book.id) ? "Solicitação Pendente" : "Solicitar Empréstimo"}
                       </Button>
                     )}
                   </CardContent>

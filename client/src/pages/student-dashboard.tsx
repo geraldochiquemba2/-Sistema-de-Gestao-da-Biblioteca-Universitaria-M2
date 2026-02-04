@@ -140,9 +140,9 @@ export default function StudentDashboard() {
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">1 dia</div>
+                  <div className="text-2xl font-bold">1 ou 5 dias</div>
                   <p className="text-xs text-muted-foreground">
-                    Livros com etiqueta cor amarela
+                    1 dia (Amarela) / 5 dias (Branca)
                   </p>
                 </CardContent>
               </Card>

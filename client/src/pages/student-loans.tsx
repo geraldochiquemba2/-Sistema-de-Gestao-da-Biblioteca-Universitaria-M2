@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Calendar, ArrowLeft, RefreshCw, AlertCircle, LogOut } from "lucide-react";
+import { BookOpen, Calendar, ArrowLeft, RefreshCw, AlertCircle, LogOut, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, isPast, differenceInDays } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -41,6 +41,11 @@ export default function StudentLoans() {
     queryKey: ["/api/books"],
   });
 
+  const { data: loanRequests } = useQuery({
+    queryKey: ["/api/loan-requests", { userId: user?.id, status: "pending" }],
+    enabled: !!user?.id,
+  });
+
   const renewLoanMutation = useMutation({
     mutationFn: async (loanId: string) => {
       const response = await apiRequest("POST", `/api/loans/${loanId}/renew`, {});
@@ -67,6 +72,7 @@ export default function StudentLoans() {
   }
 
   const activeLoans = (loans || []).filter((l) => l.status === "active");
+  const pendingRequests = Array.isArray(loanRequests) ? loanRequests : [];
 
   const getLoanBook = (bookId: string) => {
     return books?.find((b) => b.id === bookId);
@@ -268,6 +274,34 @@ export default function StudentLoans() {
                 </div>
               </CardContent>
             </Card>
+
+            {pendingRequests.length > 0 && (
+              <div className="mt-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                  <h2 className="text-lg font-semibold">Solicitações Pendentes</h2>
+                </div>
+                <div className="space-y-4">
+                  {pendingRequests.map((req: any) => {
+                    const book = getLoanBook(req.bookId);
+                    if (!book) return null;
+                    return (
+                      <Card key={req.id}>
+                        <CardContent className="flex items-center justify-between py-4">
+                          <div>
+                            <p className="font-medium">{book.title}</p>
+                            <p className="text-sm text-muted-foreground">Solicitado em {format(new Date(req.requestDate), "dd/MM/yyyy", { locale: pt })}</p>
+                          </div>
+                          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                            Aguardando Aprovação
+                          </Badge>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </>
         )}
       </main>
