@@ -67,6 +67,26 @@ export default function StudentLoans() {
     },
   });
 
+  const cancelRequestMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      await apiRequest("DELETE", `/api/loan-requests/${requestId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Solicitação cancelada",
+        description: "O pedido de empréstimo foi removido.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/loan-requests"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao cancelar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!user) {
     return null;
   }
@@ -292,9 +312,21 @@ export default function StudentLoans() {
                             <p className="font-medium">{book.title}</p>
                             <p className="text-sm text-muted-foreground">Solicitado em {format(new Date(req.requestDate), "dd/MM/yyyy", { locale: pt })}</p>
                           </div>
-                          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                            Aguardando Aprovação
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                              Aguardando Aprovação
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
+                              onClick={() => cancelRequestMutation.mutate(req.id)}
+                              disabled={cancelRequestMutation.isPending}
+                              title="Cancelar solicitação"
+                            >
+                              <LogOut className="h-4 w-4 rotate-180" />
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     );

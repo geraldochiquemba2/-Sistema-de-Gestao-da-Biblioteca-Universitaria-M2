@@ -75,6 +75,23 @@ export default function BookSearch() {
 
   if (!user) return null;
 
+  const cancelRequestMutation = useMutation({
+    mutationFn: async (bookId: string) => {
+      // Find the request ID for this book
+      const request = userLoanRequests?.find((r: any) => r.bookId === bookId && r.status === "pending");
+      if (!request) throw new Error("Solicitação não encontrada");
+
+      await apiRequest("DELETE", `/api/loan-requests/${request.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/loan-requests"] });
+      toast({ title: "Solicitação cancelada", description: "O pedido foi removido." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro ao cancelar", description: error.message, variant: "destructive" });
+    },
+  });
+
   const booksArray = Array.isArray(books) ? books : [];
   const categoriesArray = Array.isArray(categories) ? categories : [];
   const reservationsArray = Array.isArray(userReservations) ? userReservations : [];
@@ -247,11 +264,26 @@ export default function BookSearch() {
                       <Button
                         className="w-full"
                         variant={hasPendingRequest(book.id) ? "outline" : "default"}
-                        onClick={() => !hasPendingRequest(book.id) && requestLoanMutation.mutate(book.id)}
-                        disabled={requestLoanMutation.isPending || hasPendingRequest(book.id)}
+                        onClick={() => {
+                          if (hasPendingRequest(book.id)) {
+                            cancelRequestMutation.mutate(book.id);
+                          } else {
+                            requestLoanMutation.mutate(book.id);
+                          }
+                        }}
+                        disabled={requestLoanMutation.isPending || cancelRequestMutation.isPending}
                       >
-                        <BookOpen className="h-4 w-4 mr-2" />
-                        {hasPendingRequest(book.id) ? "Solicitação Pendente" : "Solicitar Empréstimo"}
+                        {hasPendingRequest(book.id) ? (
+                          <>
+                            <LogOut className="h-4 w-4 mr-2 rotate-180" />
+                            Cancelar Solicitação
+                          </>
+                        ) : (
+                          <>
+                            <BookOpen className="h-4 w-4 mr-2" />
+                            Solicitar Empréstimo
+                          </>
+                        )}
                       </Button>
                     )}
                   </CardContent>
