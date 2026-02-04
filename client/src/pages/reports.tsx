@@ -14,8 +14,10 @@ interface FinancialStats {
 
 interface Stats extends FinancialStats {
   totalBooks: number;
-  activeLoans: number;
   availableBooks: number;
+  totalCopies: number;
+  totalAvailableCopies: number;
+  activeLoans: number;
 }
 
 interface CategoryStat {
@@ -59,9 +61,7 @@ export default function Reports() {
     return <div className="p-6">Carregando relatórios...</div>;
   }
 
-  const utilizationRate = stats?.totalBooks ? Math.round((stats.activeLoans / stats.totalBooks) * 100) : 0;
-  const neverBorrowed = stats?.availableBooks; // Crude proxy, but okay for now. Actually available != never borrowed.
-  // Using availableBooks as "Not currently borrowed" for now.
+  const utilizationRate = stats?.totalCopies ? Math.round((stats.activeLoans / stats.totalCopies) * 100) : 0;
 
   return (
     <div className="flex-1 space-y-6 p-6">
@@ -87,7 +87,7 @@ export default function Reports() {
           <CardContent>
             <div className="text-2xl font-bold">{utilizationRate}%</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {stats?.activeLoans} de {stats?.totalBooks.toLocaleString()} livros
+              {stats?.activeLoans} de {stats?.totalCopies.toLocaleString()} exemplares
             </p>
           </CardContent>
         </Card>
@@ -98,8 +98,8 @@ export default function Reports() {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.availableBooks}</div>
-            <p className="text-xs text-muted-foreground mt-1">Livros nas prateleiras</p>
+            <div className="text-2xl font-bold">{stats?.totalAvailableCopies}</div>
+            <p className="text-xs text-muted-foreground mt-1">Exemplares nas prateleiras</p>
           </CardContent>
         </Card>
 

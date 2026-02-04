@@ -7,6 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface DashboardStats {
   totalBooks: number;
   availableBooks: number;
+  totalCopies: number;
+  totalAvailableCopies: number;
   totalUsers: number;
   activeLoans: number;
   overdueLoans: number;
@@ -111,8 +113,16 @@ export default function Dashboard() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Livros Disponíveis</span>
+                <span className="text-sm font-medium">Títulos Disponíveis</span>
                 <span className="text-2xl font-bold text-green-600">{stats?.availableBooks || 0}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Total de Exemplares</span>
+                <span className="text-xl font-semibold">{stats?.totalCopies || 0}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Exemplares Disponíveis</span>
+                <span className="text-xl font-semibold text-primary">{stats?.totalAvailableCopies || 0}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Empréstimos Atrasados</span>
@@ -121,8 +131,8 @@ export default function Dashboard() {
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Taxa de Utilização</span>
                 <span className="text-2xl font-bold text-primary">
-                  {stats?.totalBooks ? 
-                    Math.round((stats.activeLoans / stats.totalBooks) * 100) : 0}%
+                  {stats?.totalCopies ?
+                    Math.round((stats.activeLoans / stats.totalCopies) * 100) : 0}%
                 </span>
               </div>
             </div>

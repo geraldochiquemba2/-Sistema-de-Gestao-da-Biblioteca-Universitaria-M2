@@ -689,7 +689,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         totalBooks: books.length,
-        availableBooks: books.reduce((sum, b) => sum + b.availableCopies, 0),
+        availableBooks: books.filter(b => b.availableCopies > 0).length, // Count available unique titles
+        totalCopies: books.reduce((sum, b) => sum + b.totalCopies, 0),
+        totalAvailableCopies: books.reduce((sum, b) => sum + b.availableCopies, 0),
         totalUsers: users.length,
         activeLoans: activeLoans.length,
         overdueLoans: overdueLoans.length,
@@ -784,35 +786,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Título não fornecido" });
       }
 
-      // Pesquisa no Google Books priorizando resultados em Português e sem restrição de região para abranger Angola/África
-      const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(title)}&langRestrict=pt&maxResults=5`);
-      const data = await response.json();
+      // Pesquisa no Google Books priorizando resultados em Português
+      let response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(title)}&maxResults=5`);
+      let data = await response.json();
 
       if (!data.items || data.items.length === 0) {
-        // Tenta uma busca mais ampla incluindo termos como "Angola" ou "África" se o título for curto
-        const broaderQuery = title.length < 10 ? `${title} Angola` : title;
+        // Tenta uma busca mais ampla
+        const broaderQuery = title;
         const fallbackResponse = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(broaderQuery)}&maxResults=5`);
-        const fallbackData = await fallbackResponse.json();
-
-        if (!fallbackData.items || fallbackData.items.length === 0) {
-          return res.status(404).json({ message: "Nenhum livro encontrado na internet." });
-        }
-
-        data.items = fallbackData.items;
+        data = await fallbackResponse.json();
       }
 
-      const volumeInfo = data.items[0].volumeInfo;
-      const isbnObj = volumeInfo.industryIdentifiers?.find((id: any) => id.type === "ISBN_13") || volumeInfo.industryIdentifiers?.[0];
+      if (!data.items || data.items.length === 0) {
+        return res.status(404).json({ message: "Nenhum livro encontrado na internet." });
+      }
 
-      res.json({
-        title: volumeInfo.title,
-        author: volumeInfo.authors?.join(", "),
-        isbn: isbnObj?.identifier,
-        publisher: volumeInfo.publisher,
-        yearPublished: volumeInfo.publishedDate ? parseInt(volumeInfo.publishedDate.split("-")[0]) : null,
-        description: volumeInfo.description,
-        categories: volumeInfo.categories?.join(", ")
+      const results = data.items.map((item: any) => {
+        const volumeInfo = item.volumeInfo;
+        const isbnObj = volumeInfo.industryIdentifiers?.find((id: any) => id.type === "ISBN_13") || volumeInfo.industryIdentifiers?.[0];
+
+        return {
+          title: volumeInfo.title,
+          author: volumeInfo.authors?.join(", "),
+          isbn: isbnObj?.identifier,
+          publisher: volumeInfo.publisher,
+          yearPublished: volumeInfo.publishedDate ? parseInt(volumeInfo.publishedDate.split("-")[0]) : null,
+          description: volumeInfo.description,
+          thumbnail: volumeInfo.imageLinks?.thumbnail,
+          categories: volumeInfo.categories?.join(", ")
+        };
       });
+
+      res.json(results);
     } catch (error: any) {
       console.error("Web Search Error:", error);
       res.status(500).json({ message: "Erro ao pesquisar na internet: " + error.message });

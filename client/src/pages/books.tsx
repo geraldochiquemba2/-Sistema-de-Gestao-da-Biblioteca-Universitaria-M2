@@ -11,8 +11,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Search, BookOpen, Tag, Camera, Loader2 } from "lucide-react";
+import { Plus, Search, BookOpen, Tag, Camera, Loader2, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 
@@ -40,8 +51,10 @@ const tagColors = {
 export default function Books() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingBook, setEditingBook] = useState<any | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isSearchingWeb, setIsSearchingWeb] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[] | null>(null);
   const { toast } = useToast();
 
   const handleWebSearch = async () => {
@@ -56,23 +69,22 @@ export default function Books() {
     }
 
     setIsSearchingWeb(true);
+    setSearchResults(null);
     try {
       const res = await apiRequest("POST", "/api/books/web-search", { title });
       const data = await res.json();
-      
-      if (data) {
-        form.setValue("title", data.title || form.getValues("title"));
-        form.setValue("author", data.author || "");
-        form.setValue("isbn", data.isbn || "");
-        form.setValue("publisher", data.publisher || "");
-        if (data.yearPublished) {
-          form.setValue("yearPublished", parseInt(data.yearPublished.toString()));
-        }
-        form.setValue("description", data.description || "");
 
+      if (Array.isArray(data) && data.length > 0) {
+        setSearchResults(data);
         toast({
-          title: "Informações encontradas!",
-          description: "Os dados foram recuperados da internet.",
+          title: "Resultados encontrados",
+          description: `Encontramos ${data.length} resultados. Selecione um abaixo.`,
+        });
+      } else {
+        toast({
+          title: "Nenhum resultado",
+          description: "Não foram encontrados livros com este título.",
+          variant: "destructive",
         });
       }
     } catch (error: any) {
@@ -86,6 +98,22 @@ export default function Books() {
     }
   };
 
+  const selectSearchResult = (book: any) => {
+    form.setValue("title", book.title || "");
+    form.setValue("author", book.author || "");
+    form.setValue("isbn", book.isbn || "");
+    form.setValue("publisher", book.publisher || "");
+    if (book.yearPublished) {
+      form.setValue("yearPublished", parseInt(book.yearPublished.toString()));
+    }
+    form.setValue("description", book.description || "");
+    setSearchResults(null);
+    toast({
+      title: "Dados preenchidos!",
+      description: "As informações do livro selecionado foram inseridas.",
+    });
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -97,7 +125,7 @@ export default function Books() {
       try {
         const res = await apiRequest("POST", "/api/books/ocr", { image: base64 });
         const data = await res.json();
-        
+
         form.setValue("title", data.title || "");
         form.setValue("author", data.author || "");
         form.setValue("isbn", data.isbn || "");
@@ -115,11 +143,11 @@ export default function Books() {
             title: "Capa reconhecida!",
             description: "Buscando informações complementares na internet...",
           });
-          
+
           try {
             const webRes = await apiRequest("POST", "/api/books/web-search", { title: data.title });
             const webData = await webRes.json();
-            
+
             if (webData) {
               if (!form.getValues("author")) form.setValue("author", webData.author || "");
               if (!form.getValues("isbn")) form.setValue("isbn", webData.isbn || "");
@@ -173,22 +201,78 @@ export default function Books() {
     },
   });
 
+  const openAddDialog = () => {
+    setEditingBook(null);
+    form.reset({
+      title: "",
+      author: "",
+      isbn: "",
+      publisher: "",
+      tag: "white",
+      totalCopies: 1,
+      availableCopies: 1,
+      description: "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  const openEditDialog = (book: any) => {
+    setEditingBook(book);
+    form.reset({
+      title: book.title,
+      author: book.author,
+      isbn: book.isbn || "",
+      publisher: book.publisher || "",
+      yearPublished: book.yearPublished || undefined,
+      categoryId: book.categoryId || undefined,
+      tag: book.tag,
+      totalCopies: book.totalCopies,
+      availableCopies: book.availableCopies,
+      description: book.description || "",
+    });
+    setIsDialogOpen(true);
+  };
+
   const createBookMutation = useMutation({
     mutationFn: async (data: BookFormValues) => {
+      if (editingBook) {
+        return apiRequest("PATCH", `/api/books/${editingBook.id}`, data);
+      }
       return apiRequest("POST", "/api/books", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/books"] });
       toast({
-        title: "Livro cadastrado!",
-        description: "O livro foi adicionado ao acervo com sucesso.",
+        title: editingBook ? "Livro atualizado!" : "Livro cadastrado!",
+        description: editingBook ? "As alterações foram salvas." : "O livro foi adicionado ao acervo com sucesso.",
       });
       setIsDialogOpen(false);
+      setEditingBook(null);
       form.reset();
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao cadastrar livro",
+        title: "Erro ao salvar livro",
+        description: error.message || "Tente novamente",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteBookMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/books/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/books"] });
+      toast({
+        title: "Livro excluído",
+        description: "O livro foi removido do acervo.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao excluir livro",
         description: error.message || "Tente novamente",
         variant: "destructive",
       });
@@ -208,18 +292,21 @@ export default function Books() {
             Gerir o acervo bibliográfico da instituição
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) setEditingBook(null);
+        }}>
           <DialogTrigger asChild>
-            <Button data-testid="button-add-book">
+            <Button data-testid="button-add-book" onClick={openAddDialog}>
               <Plus className="mr-2 h-4 w-4" />
               Adicionar Livro
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Cadastrar Novo Livro</DialogTitle>
+              <DialogTitle>{editingBook ? "Editar Livro" : "Cadastrar Novo Livro"}</DialogTitle>
               <DialogDescription>
-                Preencha os dados do livro ou tire uma foto da capa para preenchimento automático
+                {editingBook ? "Atualize as informações do livro no acervo." : "Preencha os dados do livro ou tire uma foto da capa para preenchimento automático."}
               </DialogDescription>
             </DialogHeader>
 
@@ -250,15 +337,15 @@ export default function Books() {
                   <div className="w-full flex flex-col gap-2">
                     <Label htmlFor="web-title-search" className="text-xs">Ou digite o título para buscar na internet</Label>
                     <div className="flex gap-2">
-                      <Input 
+                      <Input
                         id="web-title-search"
                         placeholder="Ex: Dom Casmurro"
                         value={form.watch("title")}
                         onChange={(e) => form.setValue("title", e.target.value)}
                         className="flex-1"
                       />
-                      <Button 
-                        type="button" 
+                      <Button
+                        type="button"
                         variant="secondary"
                         onClick={handleWebSearch}
                         disabled={isSearchingWeb}
@@ -271,6 +358,37 @@ export default function Books() {
                 </div>
               )}
             </div>
+
+            {searchResults && searchResults.length > 0 && (
+              <div className="mb-6 border rounded-lg overflow-hidden">
+                <div className="bg-muted p-2 text-xs font-bold uppercase flex justify-between items-center">
+                  <span>Selecione a versão correta:</span>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setSearchResults(null)}>Cancelar</Button>
+                </div>
+                <div className="max-h-60 overflow-y-auto divide-y">
+                  {searchResults.map((book, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 hover:bg-muted/50 cursor-pointer flex gap-3 items-start transition-colors"
+                      onClick={() => selectSearchResult(book)}
+                    >
+                      {book.thumbnail ? (
+                        <img src={book.thumbnail} alt={book.title} className="w-12 h-16 object-cover rounded shadow-sm flex-shrink-0" />
+                      ) : (
+                        <div className="w-12 h-16 bg-muted flex items-center justify-center rounded flex-shrink-0 text-muted-foreground">
+                          <BookOpen className="h-6 w-6" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm truncate">{book.title}</p>
+                        <p className="text-xs text-muted-foreground">{book.author}</p>
+                        {book.publisher && <p className="text-[10px] text-muted-foreground italic">{book.publisher} {book.yearPublished ? `(${book.yearPublished})` : ""}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -336,9 +454,9 @@ export default function Books() {
                       <FormItem>
                         <FormLabel>Ano de Publicação</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field} 
+                          <Input
+                            type="number"
+                            {...field}
                             onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
                             data-testid="input-year"
                           />
@@ -402,9 +520,9 @@ export default function Books() {
                       <FormItem>
                         <FormLabel>Total de Exemplares</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field} 
+                          <Input
+                            type="number"
+                            {...field}
                             onChange={(e) => field.onChange(parseInt(e.target.value))}
                             data-testid="input-total-copies"
                           />
@@ -420,9 +538,9 @@ export default function Books() {
                       <FormItem>
                         <FormLabel>Exemplares Disponíveis</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
-                            {...field} 
+                          <Input
+                            type="number"
+                            {...field}
                             onChange={(e) => field.onChange(parseInt(e.target.value))}
                             data-testid="input-available-copies"
                           />
@@ -446,7 +564,7 @@ export default function Books() {
                   )}
                 />
                 <Button type="submit" className="w-full" disabled={createBookMutation.isPending} data-testid="button-submit-book">
-                  {createBookMutation.isPending ? "Cadastrando..." : "Cadastrar Livro"}
+                  {createBookMutation.isPending ? "Salvando..." : editingBook ? "Atualizar Livro" : "Cadastrar Livro"}
                 </Button>
               </form>
             </Form>
@@ -508,9 +626,45 @@ export default function Books() {
                       <span className="text-muted-foreground">/{book.totalCopies}</span>
                     </span>
                   </div>
-                  <Badge variant={book.availableCopies > 0 ? "default" : "secondary"}>
-                    {book.availableCopies > 0 ? "Disponível" : "Indisponível"}
-                  </Badge>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-primary"
+                      onClick={() => openEditDialog(book)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir Livro?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isso removerá permanentemente o livro
+                            "<strong>{book.title}</strong>" do sistema.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => deleteBookMutation.mutate(book.id)}
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               </CardContent>
             </Card>

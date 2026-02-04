@@ -44,10 +44,6 @@ export default function TeacherDashboard() {
               <Search className="h-4 w-4 mr-2" />
               Buscar Livros
             </Button>
-            <Button variant="outline" onClick={logout} data-testid="button-logout">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sair
-            </Button>
           </div>
         </div>
       </header>
@@ -59,90 +55,90 @@ export default function TeacherDashboard() {
           </div>
         ) : (
           <>
-        <div className="grid gap-6 md:grid-cols-4 mb-8">
-          <Card 
-            className="cursor-pointer hover-elevate active-elevate-2"
-            onClick={() => setLocation("/teacher/loans")}
-            data-testid="card-active-loans"
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Empréstimos Ativos</CardTitle>
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid="text-active-loans">{activeLoans.length}/4</div>
-              <p className="text-xs text-muted-foreground">
-                Limite de 4 livros por docente
-              </p>
-            </CardContent>
-          </Card>
+            <div className="grid gap-6 md:grid-cols-4 mb-8">
+              <Card
+                className="cursor-pointer hover-elevate active-elevate-2"
+                onClick={() => setLocation("/teacher/loans")}
+                data-testid="card-active-loans"
+              >
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Empréstimos Ativos</CardTitle>
+                  <BookOpen className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-active-loans">{activeLoans.length}/4</div>
+                  <p className="text-xs text-muted-foreground">
+                    Limite de 4 livros por docente
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Prazo de Empréstimo</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">15 dias</div>
-              <p className="text-xs text-muted-foreground">
-                Livros com etiqueta cor branca
-              </p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Prazo de Empréstimo</CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">15 dias</div>
+                  <p className="text-xs text-muted-foreground">
+                    Livros com etiqueta cor branca
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Prazo de Empréstimo</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">1 dia</div>
-              <p className="text-xs text-muted-foreground">
-                Livros com etiqueta cor amarela
-              </p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Prazo de Empréstimo</CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">1 dia</div>
+                  <p className="text-xs text-muted-foreground">
+                    Livros com etiqueta cor amarela
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Multas Pendentes</CardTitle>
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid="text-total-fines">{totalFines} Kz</div>
-              <p className="text-xs text-muted-foreground">
-                {pendingFines.length} multa(s) pendente(s)
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Regras de Empréstimo para Docentes</CardTitle>
-            <CardDescription>Informações importantes sobre seus empréstimos</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h3 className="font-semibold mb-2">Limites:</h3>
-              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                <li>Máximo de 4 livros simultâneos</li>
-                <li>Prazo de 15 dias para livros com etiqueta cor branca</li>
-                <li>Livros com etiqueta cor amarela: apenas 1 dia</li>
-                <li>Livros com etiqueta cor vermelha: uso exclusivo na biblioteca</li>
-              </ul>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Multas Pendentes</CardTitle>
+                  <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-total-fines">{totalFines} Kz</div>
+                  <p className="text-xs text-muted-foreground">
+                    {pendingFines.length} multa(s) pendente(s)
+                  </p>
+                </CardContent>
+              </Card>
             </div>
-            <div>
-              <h3 className="font-semibold mb-2">Restrições:</h3>
-              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                <li>Apenas 1 obra por título (não pode ter exemplares duplicados do mesmo título)</li>
-                <li>Multas acima de 2000 Kz bloqueiam novos empréstimos</li>
-                <li>Multa de 500 Kz por dia de atraso</li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-        </>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Regras de Empréstimo para Docentes</CardTitle>
+                <CardDescription>Informações importantes sobre seus empréstimos</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h3 className="font-semibold mb-2">Limites:</h3>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                    <li>Máximo de 4 livros simultâneos</li>
+                    <li>Prazo de 15 dias para livros com etiqueta cor branca</li>
+                    <li>Livros com etiqueta cor amarela: apenas 1 dia</li>
+                    <li>Livros com etiqueta cor vermelha: uso exclusivo na biblioteca</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2">Restrições:</h3>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                    <li>Apenas 1 obra por título (não pode ter exemplares duplicados do mesmo título)</li>
+                    <li>Multas acima de 2000 Kz bloqueiam novos empréstimos</li>
+                    <li>Multa de 500 Kz por dia de atraso</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          </>
         )}
       </main>
     </div>

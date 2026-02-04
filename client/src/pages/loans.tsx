@@ -3,27 +3,105 @@ import { LoanTable, type Loan } from "@/components/loan-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Scan } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Plus, Search, Scan, Check, X, BookOpen } from "lucide-react";
+import { format } from "date-fns";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const loanFormSchema = z.object({
+  userId: z.string().min(1, "Utilizador é obrigatório"),
+  bookId: z.string().min(1, "Livro é obrigatório"),
+});
+
+type LoanFormValues = z.infer<typeof loanFormSchema>;
+
 export default function Loans() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoanDialogOpen, setIsLoanDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: loans, isLoading } = useQuery<Loan[]>({
+  const { data: loans, isLoading: loansLoading } = useQuery<Loan[]>({
     queryKey: ["/api/loans"],
+  });
+
+  const { data: requests, isLoading: requestsLoading } = useQuery<any[]>({
+    queryKey: ["/api/loan-requests"],
+  });
+
+  const { data: users } = useQuery<any[]>({
+    queryKey: ["/api/users"],
+  });
+
+  const { data: books } = useQuery<any[]>({
+    queryKey: ["/api/books"],
+  });
+
+  const form = useForm<LoanFormValues>({
+    resolver: zodResolver(loanFormSchema),
+    defaultValues: {
+      userId: "",
+      bookId: "",
+    },
   });
 
   const activeLoans = loans?.filter(l => l.status === "active") || [];
   const overdueLoans = loans?.filter(l => l.status === "active" && new Date(l.dueDate) < new Date()) || [];
   const returnedLoans = loans?.filter(l => l.status === "returned") || [];
+  const pendingRequests = requests?.filter(r => r.status === "pending") || [];
+
+  const createLoanMutation = useMutation({
+    mutationFn: async (data: LoanFormValues) => {
+      return apiRequest("POST", "/api/loans", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/loans"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/books"] });
+      toast({ title: "Empréstimo realizado com sucesso!" });
+      setIsLoanDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao realizar empréstimo",
+        description: error.message || "Tente novamente",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleReturn = async (id: string) => {
     try {
       await apiRequest("POST", `/api/loans/${id}/return`);
       queryClient.invalidateQueries({ queryKey: ["/api/loans"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/books"] });
       toast({ title: "Livro devolvido com sucesso" });
     } catch (error) {
       toast({ title: "Erro ao devolver", variant: "destructive" });
@@ -40,12 +118,44 @@ export default function Loans() {
     }
   };
 
+  const handleApproveRequest = async (id: string) => {
+    try {
+      await apiRequest("POST", `/api/loan-requests/${id}/approve`);
+      queryClient.invalidateQueries({ queryKey: ["/api/loan-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loans"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/books"] });
+      toast({ title: "Solicitação aprovada e empréstimo criado!" });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao aprovar",
+        description: error.message || "Tente novamente",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRejectRequest = async (id: string) => {
+    try {
+      await apiRequest("POST", `/api/loan-requests/${id}/reject`);
+      queryClient.invalidateQueries({ queryKey: ["/api/loan-requests"] });
+      toast({ title: "Solicitação rejeitada" });
+    } catch (error) {
+      toast({ title: "Erro ao rejeitar", variant: "destructive" });
+    }
+  };
+
+  const onSubmit = (data: LoanFormValues) => {
+    createLoanMutation.mutate(data);
+  };
+
   const filterLoans = (loansToFilter: Loan[]) =>
     loansToFilter.filter(
       (loan) =>
         loan.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         loan.bookTitle.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+  const isLoading = loansLoading || requestsLoading;
 
   if (isLoading) {
     return <div className="p-6">Carregando empréstimos...</div>;
@@ -65,10 +175,83 @@ export default function Loans() {
             <Scan className="h-4 w-4 mr-2" />
             Digitalizar Código
           </Button>
-          <Button data-testid="button-new-loan">
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Empréstimo
-          </Button>
+
+          <Dialog open={isLoanDialogOpen} onOpenChange={setIsLoanDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-new-loan">
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Empréstimo
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Novo Empréstimo</DialogTitle>
+                <DialogDescription>
+                  Selecione o utilizador e o livro para registrar um novo empréstimo.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                  <FormField
+                    control={form.control}
+                    name="userId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Utilizador</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-user">
+                              <SelectValue placeholder="Selecione um utilizador" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {users?.map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                {user.name} ({user.userType})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="bookId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Livro</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-book">
+                              <SelectValue placeholder="Selecione um livro" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {books?.filter(b => b.availableCopies > 0).map((book) => (
+                              <SelectItem key={book.id} value={book.id}>
+                                {book.title} ({book.availableCopies} disponíveis)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={createLoanMutation.isPending}
+                    data-testid="button-submit-loan"
+                  >
+                    {createLoanMutation.isPending ? "Processando..." : "Confirmar Empréstimo"}
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -86,7 +269,15 @@ export default function Loans() {
       <Tabs defaultValue="active" className="space-y-4">
         <TabsList>
           <TabsTrigger value="active" data-testid="tab-active-loans">
-            Empréstimos Ativos ({activeLoans.length})
+            Ativos ({activeLoans.length})
+          </TabsTrigger>
+          <TabsTrigger value="requests" data-testid="tab-pending-requests" className="relative">
+            Solicitações ({pendingRequests.length})
+            {pendingRequests.length > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                {pendingRequests.length}
+              </span>
+            )}
           </TabsTrigger>
           <TabsTrigger value="overdue" data-testid="tab-overdue-loans">
             Atrasados ({overdueLoans.length})
@@ -103,6 +294,71 @@ export default function Loans() {
             onRenew={handleRenew}
             onViewUser={(id) => console.log("Ver utilizador:", id)}
           />
+        </TabsContent>
+
+        <TabsContent value="requests" className="space-y-4">
+          <div className="rounded-md border bg-card">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="p-3 text-left font-medium">Utilizador</th>
+                    <th className="p-3 text-left font-medium">Livro Solicitado</th>
+                    <th className="p-3 text-left font-medium">Data do Pedido</th>
+                    <th className="p-3 text-right font-medium">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {pendingRequests.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                        Nenhuma solicitação pendente
+                      </td>
+                    </tr>
+                  ) : (
+                    pendingRequests.map((req) => {
+                      const user = users?.find(u => u.id === req.userId);
+                      const book = books?.find(b => b.id === req.bookId);
+                      return (
+                        <tr key={req.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="p-3">
+                            <span className="font-medium text-primary">{user?.name || "..."}</span>
+                            <div className="text-xs text-muted-foreground capitalize">{user?.userType}</div>
+                          </td>
+                          <td className="p-3">
+                            <span className="font-medium">{book?.title || "..."}</span>
+                            <div className="text-xs text-muted-foreground">ISBN: {book?.isbn || "N/A"}</div>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            {format(new Date(req.requestDate), "dd/MM/yyyy HH:mm")}
+                          </td>
+                          <td className="p-3 text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-destructive hover:bg-destructive/10"
+                                onClick={() => handleRejectRequest(req.id)}
+                              >
+                                <X className="h-4 w-4 mr-1" /> Rejeitar
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="bg-chart-2 hover:bg-chart-2/90"
+                                onClick={() => handleApproveRequest(req.id)}
+                              >
+                                <Check className="h-4 w-4 mr-1" /> Aprovar
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="overdue" className="space-y-4">
