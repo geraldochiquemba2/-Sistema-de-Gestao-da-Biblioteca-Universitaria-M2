@@ -31,6 +31,7 @@ export function AppSidebar() {
         { title: "Dashboard", url: "/student/dashboard", icon: LayoutDashboard },
         { title: "Meus Empréstimos", url: "/student/loans", icon: BookCopy },
         { title: "Pesquisar Livros", url: "/student/books", icon: Search },
+        { title: "Repositório Digital", url: "/repository", icon: BookOpen },
       ];
     }
     if (user?.userType === "teacher") {
@@ -38,6 +39,7 @@ export function AppSidebar() {
         { title: "Dashboard", url: "/teacher/dashboard", icon: LayoutDashboard },
         { title: "Meus Empréstimos", url: "/teacher/loans", icon: BookCopy },
         { title: "Pesquisar Livros", url: "/teacher/books", icon: Search },
+        { title: "Repositório Digital", url: "/repository", icon: BookOpen },
       ];
     }
     if (user?.userType === "staff") {
@@ -45,6 +47,7 @@ export function AppSidebar() {
         { title: "Dashboard", url: "/staff/dashboard", icon: LayoutDashboard },
         { title: "Meus Empréstimos", url: "/staff/loans", icon: BookCopy },
         { title: "Pesquisar Livros", url: "/staff/books", icon: Search },
+        { title: "Repositório Digital", url: "/repository", icon: BookOpen },
       ];
     }
     // Admin menu items
