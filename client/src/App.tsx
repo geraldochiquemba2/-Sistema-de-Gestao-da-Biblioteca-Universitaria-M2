@@ -154,8 +154,9 @@ function Router() {
           </AuthenticatedLayout>
         </PrivateRoute>
       </Route>
+
       <Route path="/repository">
-        <PrivateRoute requiredRole="admin">
+        <PrivateRoute>
           <AuthenticatedLayout>
             <Repository />
           </AuthenticatedLayout>
