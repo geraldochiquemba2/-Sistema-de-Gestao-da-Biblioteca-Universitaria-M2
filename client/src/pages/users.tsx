@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, Plus, Eye } from "lucide-react";
+import { Search, Eye } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -73,15 +73,11 @@ export default function Users() {
     <div className="flex-1 space-y-6 p-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestão de Utilizadores</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Gestão de Utilizadores (v2)</h1>
           <p className="text-muted-foreground">
             Gerencie os utilizadores da biblioteca e seus acessos
           </p>
         </div>
-        <Button data-testid="button-add-user">
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Utilizador
-        </Button>
       </div>
 
       <div className="flex gap-4 flex-wrap">
