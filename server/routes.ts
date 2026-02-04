@@ -786,49 +786,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Título não fornecido" });
       }
 
-      let data: any = { items: [] };
+      let results: any[] = [];
       const searchVariants = [
         title,
         `intitle:${title}`,
-        title.split(' ').length > 1 ? title.split(' ').slice(0, 3).join(' ') : null, // Primeiras palavras se houver várias
         title.replace(/\d+/g, '').trim()        // Sem números
       ].filter((q, i, self) => q && q.trim().length > 0 && self.indexOf(q) === i);
 
+      // Google Books Search
       for (const query of searchVariants) {
         try {
-          console.log(`Attempting search for query: "${query}"`);
-          const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=10&langRestrict=pt`);
+          const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=10`);
           const result = await response.json();
-          console.log(`Search result for "${query}": Found ${result.items?.length || 0} items`);
 
           if (result.items && result.items.length > 0) {
-            data = result;
+            results = result.items.map((item: any) => {
+              const info = item.volumeInfo;
+              const isbn = info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || info.industryIdentifiers?.[0]?.identifier;
+              return {
+                title: info.title,
+                author: info.authors?.join(", "),
+                isbn: isbn,
+                publisher: info.publisher,
+                yearPublished: info.publishedDate ? parseInt(info.publishedDate.split("-")[0]) : null,
+                description: info.description,
+                thumbnail: info.imageLinks?.thumbnail,
+                categories: info.categories?.join(", ")
+              };
+            });
             break;
           }
-        } catch (err: any) {
-          console.error(`Search variation failed for query "${query}":`, err.message);
-        }
+        } catch (err) { console.error("Google Search fail:", err); }
       }
 
-      if (!data.items || data.items.length === 0) {
-        return res.status(404).json({ message: `Não encontramos nada para "${title}" [v5]. Tente outro título ou autor mais específico.` });
+      // Fallback a Open Library se Google no deu resultados
+      if (results.length === 0) {
+        try {
+          const openLibRes = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(title)}&limit=5`);
+          const openData = await openLibRes.json();
+          results = (openData.docs || []).map((doc: any) => ({
+            title: doc.title,
+            author: doc.author_name?.join(", "),
+            isbn: doc.isbn?.[0],
+            publisher: doc.publisher?.[0],
+            yearPublished: doc.first_publish_year,
+            description: doc.first_sentence?.[0],
+            thumbnail: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg` : null,
+            categories: doc.subject?.slice(0, 3).join(", ")
+          }));
+        } catch (err) { console.error("OpenLibrary fail:", err); }
       }
 
-      const results = data.items.map((item: any) => {
-        const volumeInfo = item.volumeInfo;
-        const isbnObj = volumeInfo.industryIdentifiers?.find((id: any) => id.type === "ISBN_13") || volumeInfo.industryIdentifiers?.[0];
-
-        return {
-          title: volumeInfo.title,
-          author: volumeInfo.authors?.join(", "),
-          isbn: isbnObj?.identifier,
-          publisher: volumeInfo.publisher,
-          yearPublished: volumeInfo.publishedDate ? parseInt(volumeInfo.publishedDate.split("-")[0]) : null,
-          description: volumeInfo.description,
-          thumbnail: volumeInfo.imageLinks?.thumbnail,
-          categories: volumeInfo.categories?.join(", ")
-        };
-      });
+      if (results.length === 0) {
+        return res.status(404).json({ message: `Não encontramos nada para "${title}" [v6]. Tente simplificar o nome.` });
+      }
 
       res.json(results);
     } catch (error: any) {
