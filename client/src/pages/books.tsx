@@ -28,8 +28,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 
 const bookFormSchema = z.object({
-  title: z.string().min(1, "Título é obrigatório"),
-  author: z.string().min(1, "Autor é obrigatório"),
+  title: z.string().optional(),
+  author: z.string().optional(),
   isbn: z.string().optional(),
   publisher: z.string().optional(),
   yearPublished: z.number().optional(),

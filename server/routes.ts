@@ -316,9 +316,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/books", async (req, res) => {
     try {
-      const bookData = insertBookSchema.parse(req.body);
+      const data = { ...req.body };
 
-      // Check for duplicate ISBN
+      // Fallbacks para campos obrigatórios
+      if (!data.title || data.title.trim() === "") data.title = "Não Identificado";
+      if (!data.author || data.author.trim() === "") data.author = "Não Identificado";
+
+      // Tratar ISBN vazio como null para não conflitar com unique constraint
+      if (data.isbn === "" || data.isbn === "Não Identificado") {
+        data.isbn = null;
+      }
+
+      const bookData = insertBookSchema.parse(data);
+
+      // Check for duplicate ISBN (only if not null)
       if (bookData.isbn) {
         const allBooks = await storage.getAllBooks();
         const existingByIsbn = allBooks.find(b => b.isbn === bookData.isbn);
@@ -327,15 +338,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Check for duplicate Title + Author
-      const allBooks = await storage.getAllBooks();
-      const existingByTitleAuthor = allBooks.find(b =>
-        b.title.toLowerCase() === bookData.title.toLowerCase() &&
-        b.author.toLowerCase() === bookData.author.toLowerCase()
-      );
+      // Check for duplicate Title + Author (only if not "Não Identificado")
+      if (bookData.title !== "Não Identificado" && bookData.author !== "Não Identificado") {
+        const allBooks = await storage.getAllBooks();
+        const existingByTitleAuthor = allBooks.find(b =>
+          b.title.toLowerCase() === bookData.title.toLowerCase() &&
+          b.author.toLowerCase() === bookData.author.toLowerCase()
+        );
 
-      if (existingByTitleAuthor) {
-        return res.status(400).json({ message: `Este livro ("${bookData.title}") de ${bookData.author} já está cadastrado no acervo.` });
+        if (existingByTitleAuthor) {
+          return res.status(400).json({ message: `Este livro ("${bookData.title}") de ${bookData.author} já está cadastrado no acervo.` });
+        }
       }
 
       const book = await storage.createBook(bookData);
