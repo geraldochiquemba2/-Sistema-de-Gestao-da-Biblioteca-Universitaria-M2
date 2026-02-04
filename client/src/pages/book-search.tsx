@@ -227,9 +227,9 @@ export default function BookSearch() {
                     <div className="flex items-center justify-between pt-2">
                       <span className="text-sm font-medium">
                         {book.availableCopies > 0 ? (
-                          <span className="text-green-600">{book.availableCopies} disponível(is)</span>
+                          <span className="text-green-600">{book.availableCopies} de {book.totalCopies} disponível(is)</span>
                         ) : (
-                          <span className="text-red-600">Indisponível</span>
+                          <span className="text-red-600">Indisponível (0 de {book.totalCopies})</span>
                         )}
                       </span>
                     </div>
