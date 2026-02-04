@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Calendar, ArrowLeft, RefreshCw, AlertCircle, LogOut } from "lucide-react";
+import { BookOpen, Calendar, ArrowLeft, RefreshCw, AlertCircle, LogOut, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, isPast, differenceInDays } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -41,6 +41,11 @@ export default function TeacherLoans() {
     queryKey: ["/api/books"],
   });
 
+  const { data: loanRequests } = useQuery({
+    queryKey: ["/api/loan-requests", { userId: user?.id, status: "pending" }],
+    enabled: !!user?.id,
+  });
+
   const renewLoanMutation = useMutation({
     mutationFn: async (loanId: string) => {
       const response = await apiRequest("POST", `/api/loans/${loanId}/renew`, {});
@@ -62,11 +67,32 @@ export default function TeacherLoans() {
     },
   });
 
+  const cancelRequestMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      await apiRequest("DELETE", `/api/loan-requests/${requestId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Solicitação cancelada",
+        description: "O pedido de empréstimo foi removido.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/loan-requests"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao cancelar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!user) {
     return null;
   }
 
   const activeLoans = (loans || []).filter((l) => l.status === "active");
+  const pendingRequests = Array.isArray(loanRequests) ? loanRequests : [];
 
   const getLoanBook = (bookId: string) => {
     return books?.find((b) => b.id === bookId);
@@ -268,6 +294,46 @@ export default function TeacherLoans() {
                 </div>
               </CardContent>
             </Card>
+
+            {pendingRequests.length > 0 && (
+              <div className="mt-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <Clock className="h-5 w-5 text-muted-foreground" />
+                  <h2 className="text-lg font-semibold">Solicitações Pendentes</h2>
+                </div>
+                <div className="space-y-4">
+                  {pendingRequests.map((req: any) => {
+                    const book = getLoanBook(req.bookId);
+                    if (!book) return null;
+                    return (
+                      <Card key={req.id}>
+                        <CardContent className="flex items-center justify-between py-4">
+                          <div>
+                            <p className="font-medium">{book.title}</p>
+                            <p className="text-sm text-muted-foreground">Solicitado em {format(new Date(req.requestDate), "dd/MM/yyyy", { locale: pt })}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                              Aguardando Aprovação
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
+                              onClick={() => cancelRequestMutation.mutate(req.id)}
+                              disabled={cancelRequestMutation.isPending}
+                              title="Cancelar solicitação"
+                            >
+                              <LogOut className="h-4 w-4 rotate-180" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </>
         )}
       </main>
