@@ -790,9 +790,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const searchVariants = [
         title,
         `intitle:${title}`,
-        title.split(' ').slice(0, 3).join(' '), // Primeiras 3 palavras
+        title.split(' ').length > 1 ? title.split(' ').slice(0, 3).join(' ') : null, // Primeiras palavras se houver várias
         title.replace(/\d+/g, '').trim()        // Sem números
-      ].filter((q, i, self) => q && q.trim().length > 2 && self.indexOf(q) === i);
+      ].filter((q, i, self) => q && q.trim().length > 0 && self.indexOf(q) === i);
 
       for (const query of searchVariants) {
         try {
@@ -810,7 +810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (!data.items || data.items.length === 0) {
-        return res.status(404).json({ message: "Nenhum livro encontrado na internet com este título." });
+        return res.status(404).json({ message: "Nenhum livro encontrado na internet [v4]. Tente outro termo." });
       }
 
       const results = data.items.map((item: any) => {
@@ -1089,70 +1089,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
-  app.post("/api/books/ocr", async (req, res) => {
-    try {
-      const { image } = req.body; // base64 image
-      if (!image) {
-        return res.status(400).json({ message: "Imagem é obrigatória" });
-      }
-
-      // Tesseract implementation (Local OCR)
-      const buffer = Buffer.from(image, 'base64');
-
-      const worker = await createWorker("eng+por"); // Support English and Portuguese
-      const { data: { text } } = await worker.recognize(buffer);
-      await worker.terminate();
-
-      console.log("OCR Text:", text);
-
-      // Heuristic Parsing
-      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
-
-      const result = {
-        title: null as string | null,
-        author: null as string | null,
-        isbn: null as string | null,
-        publisher: null as string | null,
-        yearPublished: null as number | null,
-        description: null as string | null
-      };
-
-      if (lines.length > 0) {
-        // Assume the most prominent text (often first lines) is the title
-        // We'll take the first non-empty line as title candidate
-        result.title = lines[0];
-
-        // Try to find author (often looks like a name or starts with "By")
-        // Simple heuristic: 2nd line if not a subtitle, or lines containing common author markers
-        // This is very basic
-        if (lines.length > 1) {
-          const potentialAuthor = lines.find((l, i) => i > 0 && !/\d/.test(l) && l.length > 5 && l.length < 30);
-          if (potentialAuthor) result.author = potentialAuthor;
-        }
-
-        // ISBN Regex
-        const isbnRegex = /(?:ISBN(?:-1[03])?:? )?(?=[0-9X]{10}$|(?=(?:[0-9]+[- ]){3})[- 0-9X]{13,17}$)[- 0-9X]{10,13}/;
-        const potentialISBN = lines.find(l => isbnRegex.test(l));
-        if (potentialISBN) {
-          const match = potentialISBN.match(isbnRegex);
-          if (match) result.isbn = match[0].replace(/[^0-9X]/g, '');
-        }
-
-        // Year Regex (19xx or 20xx)
-        const yearRegex = /\b(19|20)\d{2}\b/;
-        const potentialYear = lines.find(l => yearRegex.test(l));
-        if (potentialYear) {
-          const match = potentialYear.match(yearRegex);
-          if (match) result.yearPublished = parseInt(match[0]);
-        }
-      }
-
-      res.json(result);
-    } catch (error: any) {
-      console.error("Erro no OCR:", error);
-      res.status(500).json({ message: "Erro ao processar imagem: " + error.message });
-    }
-  });
 
   // External Book Repository Proxy
   app.get("/api/external-books", async (req, res) => {
