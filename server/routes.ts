@@ -229,6 +229,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/users", async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
+
+      // Validação extra de consistência (mesma lógica do frontend)
+      // Extract the part before @ for validation
+      const usernamePart = userData.username.split('@')[0];
+      const isNumeric = /^\d/.test(usernamePart);
+
+      if (userData.userType === "student" && !isNumeric) {
+        return res.status(400).json({ message: "Estudantes devem usar o número de matrícula no email." });
+      }
+
+      if ((userData.userType === "teacher" || userData.userType === "staff") && isNumeric) {
+        return res.status(400).json({ message: "Docentes e Funcionários devem usar email nominal (não numérico)." });
+      }
+
       const user = await storage.createUser(userData);
       const { password, ...userWithoutPassword } = user;
       res.status(201).json(userWithoutPassword);

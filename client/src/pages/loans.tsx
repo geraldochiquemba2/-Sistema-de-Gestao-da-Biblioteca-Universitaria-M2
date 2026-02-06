@@ -123,6 +123,7 @@ export default function Loans() {
       await apiRequest("POST", `/api/loan-requests/${id}/approve`);
       queryClient.invalidateQueries({ queryKey: ["/api/loan-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/loans"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loans/user"] }); // Atualiza dashboard do user
       queryClient.invalidateQueries({ queryKey: ["/api/books"] });
       toast({ title: "Solicitação aprovada e empréstimo criado!" });
     } catch (error: any) {

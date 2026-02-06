@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/contexts/AuthContext";
 import logoImage from "@assets/image_1763306167272.png";
 
@@ -82,6 +82,7 @@ export default function Login() {
         title: "Cadastro realizado com sucesso!",
         description: "Agora você pode fazer login com suas credenciais",
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setRegisterName("");
       setRegisterEmail("");
       setRegisterPassword("");
@@ -170,6 +171,27 @@ export default function Login() {
     } else {
       fullEmail = `${registerEmail}@isptec.co.ao`;
       username = `${registerEmail}@isptec.co.ao`;
+    }
+
+    // Validação de tipo de conta vs formato de email/ID
+    const isNumeric = /^\d/.test(registerEmail);
+
+    if (registerUserType === "student" && !isNumeric) {
+      toast({
+        title: "Erro no cadastro",
+        description: "Estudantes devem usar o número de matrícula.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if ((registerUserType === "teacher" || registerUserType === "staff") && isNumeric) {
+      toast({
+        title: "Erro no cadastro",
+        description: "Docentes e Funcionários devem usar o email institucional (nome.sobrenome).",
+        variant: "destructive",
+      });
+      return;
     }
 
     registerMutation.mutate({
