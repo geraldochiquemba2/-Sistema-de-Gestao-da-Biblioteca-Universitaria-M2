@@ -3,7 +3,7 @@ import { LoanTable, type Loan } from "@/components/loan-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Check, X, BookOpen } from "lucide-react";
+import { Plus, Search, Check, X, BookOpen, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -150,31 +150,40 @@ export default function Loans() {
     }
   };
 
-  const handleApproveRenewal = async (id: string) => {
-    try {
-      // Assuming logged in user is the reviewer (admin)
+  const approveRenewalMutation = useMutation({
+    mutationFn: async (id: string) => {
       await apiRequest("POST", `/api/renewal-requests/${id}/approve`, {});
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/renewal-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/loans"] });
       toast({ title: "Renovação aprovada!" });
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       toast({
         title: "Erro ao aprovar renovação",
         description: error.message || "Tente novamente",
         variant: "destructive"
       });
     }
-  };
+  });
 
-  const handleRejectRenewal = async (id: string) => {
-    try {
+  const rejectRenewalMutation = useMutation({
+    mutationFn: async (id: string) => {
       await apiRequest("POST", `/api/renewal-requests/${id}/reject`, {});
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/renewal-requests"] });
       toast({ title: "Renovação rejeitada" });
-    } catch (error) {
-      toast({ title: "Erro ao rejeitar renovação", variant: "destructive" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao rejeitar renovação",
+        description: error.message || "Tente novamente",
+        variant: "destructive"
+      });
     }
-  };
+  });
 
   const onSubmit = (data: LoanFormValues) => {
     createLoanMutation.mutate(data);
@@ -439,16 +448,28 @@ export default function Loans() {
                                   size="sm"
                                   variant="outline"
                                   className="text-destructive hover:bg-destructive/10"
-                                  onClick={() => handleRejectRenewal(req.id)}
+                                  onClick={() => rejectRenewalMutation.mutate(req.id)}
+                                  disabled={rejectRenewalMutation.isPending || approveRenewalMutation.isPending}
                                 >
-                                  <X className="h-4 w-4 mr-1" /> Rejeitar
+                                  {rejectRenewalMutation.isPending ? (
+                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  ) : (
+                                    <X className="h-4 w-4 mr-1" />
+                                  )}
+                                  Rejeitar
                                 </Button>
                                 <Button
                                   size="sm"
                                   className="bg-chart-2 hover:bg-chart-2/90"
-                                  onClick={() => handleApproveRenewal(req.id)}
+                                  onClick={() => approveRenewalMutation.mutate(req.id)}
+                                  disabled={approveRenewalMutation.isPending || rejectRenewalMutation.isPending}
                                 >
-                                  <Check className="h-4 w-4 mr-1" /> Aprovar
+                                  {approveRenewalMutation.isPending ? (
+                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  ) : (
+                                    <Check className="h-4 w-4 mr-1" />
+                                  )}
+                                  Aprovar
                                 </Button>
                               </div>
                             </td>

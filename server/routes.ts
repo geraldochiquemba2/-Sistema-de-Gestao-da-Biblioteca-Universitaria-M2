@@ -1278,13 +1278,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/renewal-requests/:id/approve", async (req, res) => {
     try {
+      console.log(`Approving renewal request ${req.params.id}`);
       const request = await storage.getRenewalRequest(req.params.id);
       if (!request) {
+        console.error(`Request ${req.params.id} not found`);
         return res.status(404).json({ message: "Solicitação não encontrada" });
       }
 
+      console.log(`Found request for loan ${request.loanId}`);
       const loan = await storage.getLoan(request.loanId);
       if (!loan) {
+        console.error(`Loan ${request.loanId} not found`);
         return res.status(404).json({ message: "Empréstimo não encontrado" });
       }
 
@@ -1292,9 +1296,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const book = await storage.getBook(loan.bookId);
 
       if (!user || !book) {
+        console.error(`User ${loan.userId} or Book ${loan.bookId} not found`);
         return res.status(404).json({ message: "Utilizador ou livro não encontrado" });
       }
 
+      console.log(`Calculating new due date for ${user.userType} and tag ${book.tag}`);
       const newDueDate = calculateDueDate(user.userType, book.tag);
 
       await storage.updateLoan(loan.id, {
@@ -1325,8 +1331,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/renewal-requests/:id/reject", async (req, res) => {
     try {
+      console.log(`Rejecting renewal request ${req.params.id}`);
       const request = await storage.getRenewalRequest(req.params.id);
       if (!request) {
+        console.error(`Request ${req.params.id} not found`);
         return res.status(404).json({ message: "Solicitação não encontrada" });
       }
 
