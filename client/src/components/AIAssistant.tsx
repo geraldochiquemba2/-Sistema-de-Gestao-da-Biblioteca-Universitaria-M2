@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, X, Send, Bot, User, Loader2, Minimize2 } from "lucide-react";
+import { BookUser, X, Send, Bot, User, Loader2, Minimize2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -94,8 +94,8 @@ export function AIAssistant() {
                                             >
                                                 <div
                                                     className={`max-w-[80%] p-3 rounded-2xl text-sm ${m.role === "user"
-                                                            ? "bg-primary text-primary-foreground rounded-tr-none"
-                                                            : "bg-muted rounded-tl-none"
+                                                        ? "bg-primary text-primary-foreground rounded-tr-none"
+                                                        : "bg-muted rounded-tl-none"
                                                         }`}
                                                 >
                                                     <p className="leading-relaxed whitespace-pre-wrap">{m.content}</p>
@@ -143,7 +143,7 @@ export function AIAssistant() {
                 className={`h-14 w-14 rounded-full shadow-lg transition-transform hover:scale-110 active:scale-95 ${isOpen ? 'rotate-90' : ''}`}
                 onClick={() => setIsOpen(!isOpen)}
             >
-                {isOpen ? <X className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
+                {isOpen ? <X className="h-6 w-6" /> : <BookUser className="h-6 w-6" />}
             </Button>
         </div>
     );

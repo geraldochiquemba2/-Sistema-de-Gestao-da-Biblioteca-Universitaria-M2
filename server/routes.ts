@@ -1306,24 +1306,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         renewalCount: loan.renewalCount + 1,
       });
 
+
       await storage.updateRenewalRequest(request.id, {
         status: "approved",
-        reviewedBy: req.body.reviewedBy,
         reviewDate: new Date(),
       });
 
       // Send approval email
       try {
         await sendRenewalDecision(user, book, true, newDueDate);
-      } catch (emailError) {
+      } catch (emailError: any) {
         console.error("Failed to send renewal decision email:", emailError);
       }
 
       res.json({ message: "Renovação aprovada", newDueDate });
     } catch (error: any) {
+      console.error("Renewal approval error:", error);
       res.status(400).json({ message: error.message || "Erro ao aprovar renovação" });
     }
   });
+
 
   app.post("/api/renewal-requests/:id/reject", async (req, res) => {
     try {
@@ -1338,7 +1340,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.updateRenewalRequest(request.id, {
         status: "rejected",
-        reviewedBy: req.body.reviewedBy,
         reviewDate: new Date(),
         notes: req.body.notes || null,
       });
@@ -1347,13 +1348,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user && book) {
         try {
           await sendRenewalDecision(user, book, false);
-        } catch (emailError) {
+        } catch (emailError: any) {
           console.error("Failed to send renewal rejection email:", emailError);
         }
       }
 
       res.json({ message: "Renovação rejeitada" });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Renewal rejection error:", error);
       res.status(500).json({ message: "Erro ao rejeitar renovação" });
     }
   });
