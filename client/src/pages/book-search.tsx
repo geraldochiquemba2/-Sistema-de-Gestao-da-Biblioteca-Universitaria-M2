@@ -12,6 +12,9 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { ReviewList } from "@/components/ReviewList";
+import { MessageSquare } from "lucide-react";
 
 export default function BookSearch() {
   const { user, logout } = useAuth();
@@ -189,10 +192,6 @@ export default function BookSearch() {
               <p className="text-sm text-muted-foreground">Bem-vindo, {user?.name}</p>
             </div>
           </div>
-          <Button variant="outline" onClick={logout} data-testid="button-logout">
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
         </div>
       </header>
 
@@ -335,13 +334,24 @@ export default function BookSearch() {
                         )}
                       </Button>
                     )}
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="w-full mt-2">
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Avaliações e Comentários
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                        <ReviewList bookId={book.id} />
+                      </DialogContent>
+                    </Dialog>
                   </CardContent>
                 </Card>
               );
             })}
           </div>
         )}
-      </main>
-    </div>
+      </main >
+    </div >
   );
 }

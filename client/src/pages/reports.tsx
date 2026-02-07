@@ -1,9 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, TrendingUp, Users, BookOpen, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
+import { Download, TrendingUp, Users, BookOpen, DollarSign } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend
+} from "recharts";
 
 interface FinancialStats {
   totalFinesAmount: number;
@@ -59,6 +62,11 @@ export default function Reports() {
   }
 
   const utilizationRate = stats?.totalCopies ? Math.round((stats.activeLoans / stats.totalCopies) * 100) : 0;
+
+  const financeData = [
+    { name: "Pago", value: stats?.paidFinesAmount || 0, color: "#10b981" },
+    { name: "Pendente", value: (stats?.totalFinesAmount || 0) - (stats?.paidFinesAmount || 0), color: "#ef4444" },
+  ];
 
   return (
     <div className="flex-1 space-y-6 p-6">
@@ -126,37 +134,28 @@ export default function Reports() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+        <Card className="col-span-1">
           <CardHeader>
-            <CardTitle>Principais Categorias por Empréstimos</CardTitle>
-            <CardDescription>Categorias de livros mais populares este mês</CardDescription>
+            <CardTitle>Popularidade por Categoria</CardTitle>
+            <CardDescription>Distribuição de empréstimos por área</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {categories?.map((category, index) => (
-                <div key={index} className="flex items-center gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="font-medium truncate">{category.name}</p>
-                      <span className="text-sm text-muted-foreground ml-2">
-                        {category.loans} empréstimos
-                      </span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div
-                        className="bg-primary h-2 rounded-full"
-                        style={{ width: `${category.percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                  <Badge variant="outline">{category.percentage}%</Badge>
-                </div>
-              ))}
-            </div>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={categories}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                <Tooltip
+                  contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
+                  cursor={{ fill: "rgba(0,0,0,0.05)" }}
+                />
+                <Bar dataKey="loans" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="col-span-1">
           <CardHeader>
             <CardTitle>Utilizadores Mais Ativos</CardTitle>
             <CardDescription>Top 5 utilizadores por número de empréstimos</CardDescription>
@@ -189,26 +188,50 @@ export default function Reports() {
           <CardDescription>Cobrança de multas e valores pendentes</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6 md:grid-cols-3">
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">Total de Multas Emitidas</p>
-              <p className="text-3xl font-bold">{stats?.totalFinesAmount.toLocaleString()} Kz</p>
+          <div className="grid gap-6 md:grid-cols-2 items-center">
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={financeData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {financeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend verticalAlign="bottom" height={36} />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">Multas Pagas</p>
-              <p className="text-3xl font-bold text-chart-2">{stats?.paidFinesAmount.toLocaleString()} Kz</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stats && stats.totalFinesAmount > 0
-                  ? ((stats.paidFinesAmount / stats.totalFinesAmount) * 100).toFixed(1)
-                  : 0}% taxa de cobrança
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">Multas Pendentes</p>
-              <p className="text-3xl font-bold text-destructive">{((stats?.totalFinesAmount || 0) - (stats?.paidFinesAmount || 0)).toLocaleString()} Kz</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Value pending
-              </p>
+            <div className="grid gap-4">
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Emitido</p>
+                  <p className="text-2xl font-bold">{stats?.totalFinesAmount.toLocaleString()} Kz</p>
+                </div>
+                <DollarSign className="h-8 w-8 text-muted-foreground opacity-20" />
+              </div>
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-emerald-50 dark:bg-emerald-950/20">
+                <div>
+                  <p className="text-sm text-emerald-600 dark:text-emerald-400">Total Recebido</p>
+                  <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{stats?.paidFinesAmount.toLocaleString()} Kz</p>
+                </div>
+                <div className="h-2 w-2 rounded-full bg-emerald-500" />
+              </div>
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-red-50 dark:bg-red-950/20">
+                <div>
+                  <p className="text-sm text-red-600 dark:text-red-400">Pendente</p>
+                  <p className="text-2xl font-bold text-red-700 dark:text-red-300">{((stats?.totalFinesAmount || 0) - (stats?.paidFinesAmount || 0)).toLocaleString()} Kz</p>
+                </div>
+                <div className="h-2 w-2 rounded-full bg-red-500" />
+              </div>
             </div>
           </div>
         </CardContent>

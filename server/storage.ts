@@ -22,7 +22,10 @@ import {
   reservations,
   fines,
   loanRequests,
-  renewalRequests
+  renewalRequests,
+  type Review,
+  type InsertReview,
+  reviews
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, and, or, lt } from "drizzle-orm";
@@ -90,6 +93,10 @@ export interface IStorage {
   getRenewalRequestsByStatus(status: string): Promise<RenewalRequest[]>;
   createRenewalRequest(renewalRequest: InsertRenewalRequest): Promise<RenewalRequest>;
   updateRenewalRequest(id: string, renewalRequest: Partial<InsertRenewalRequest>): Promise<RenewalRequest | undefined>;
+
+  // Review methods
+  getReviewsByBook(bookId: string): Promise<Review[]>;
+  createReview(review: InsertReview): Promise<Review>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -354,6 +361,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(renewalRequests.id, id))
       .returning();
     return updatedRequest;
+  }
+
+  // Review methods
+  async getReviewsByBook(bookId: string): Promise<Review[]> {
+    return await db.select().from(reviews).where(eq(reviews.bookId, bookId));
+  }
+
+  async createReview(review: InsertReview): Promise<Review> {
+    const [newReview] = await db.insert(reviews).values(review).returning();
+    return newReview;
   }
 }
 

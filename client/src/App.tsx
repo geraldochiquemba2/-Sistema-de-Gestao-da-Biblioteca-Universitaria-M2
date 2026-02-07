@@ -25,6 +25,7 @@ import TeacherLoans from "@/pages/teacher-loans";
 import StaffDashboard from "@/pages/staff-dashboard";
 import StaffLoans from "@/pages/staff-loans";
 import BookSearch from "@/pages/book-search";
+import ReadingHistory from "@/pages/reading-history";
 import Repository from "@/pages/repository";
 import NotFound from "@/pages/not-found";
 
@@ -77,6 +78,7 @@ function Router() {
               <Route path="/student/dashboard" component={StudentDashboard} />
               <Route path="/student/loans" component={StudentLoans} />
               <Route path="/student/books" component={BookSearch} />
+              <Route path="/student/history" component={ReadingHistory} />
               <Route component={NotFound} />
             </Switch>
           </AuthenticatedLayout>
@@ -91,6 +93,7 @@ function Router() {
               <Route path="/teacher/dashboard" component={TeacherDashboard} />
               <Route path="/teacher/loans" component={TeacherLoans} />
               <Route path="/teacher/books" component={BookSearch} />
+              <Route path="/teacher/history" component={ReadingHistory} />
               <Route component={NotFound} />
             </Switch>
           </AuthenticatedLayout>
@@ -105,6 +108,7 @@ function Router() {
               <Route path="/staff/dashboard" component={StaffDashboard} />
               <Route path="/staff/loans" component={StaffLoans} />
               <Route path="/staff/books" component={BookSearch} />
+              <Route path="/staff/history" component={ReadingHistory} />
               <Route component={NotFound} />
             </Switch>
           </AuthenticatedLayout>

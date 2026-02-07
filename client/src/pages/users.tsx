@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Search, Eye } from "lucide-react";
@@ -106,83 +107,149 @@ export default function Users() {
       </div>
 
       <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Utilizador</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Empréstimos Atuais</TableHead>
-              <TableHead>Multas</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredUsers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                  Nenhum utilizador encontrado
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredUsers.map((user) => (
-                <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback>
-                          {user.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium" data-testid={`text-name-${user.id}`}>{user.name}</div>
-                        <div className="text-sm text-muted-foreground">{user.email}</div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium capitalize">{userTypeConfig[getUserTypeKey(user.userType)].text}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {userTypeConfig[getUserTypeKey(user.userType)].limit}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell data-testid={`text-loans-${user.id}`}>{user.currentLoans}</TableCell>
-                  <TableCell>
+        {/* Mobile View: Cards */}
+        <div className="md:hidden space-y-4 p-4" data-testid="user-cards-mobile">
+          {filteredUsers.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">
+              Nenhum utilizador encontrado
+            </div>
+          ) : (
+            filteredUsers.map((user) => (
+              <Card key={user.id} className="p-4 space-y-4" data-testid={`card-user-${user.id}`}>
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarFallback>
+                      {user.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold truncate" data-testid={`text-name-mobile-${user.id}`}>{user.name}</div>
+                    <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+                  </div>
+                  <Badge className={statusConfig[String(user.isActive) as "true" | "false"].color}>
+                    {statusConfig[String(user.isActive) as "true" | "false"].text}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase font-semibold">Tipo</div>
+                    <div className="text-sm font-medium capitalize">{userTypeConfig[getUserTypeKey(user.userType)].text}</div>
+                    <div className="text-[10px] text-muted-foreground">{userTypeConfig[getUserTypeKey(user.userType)].limit}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase font-semibold">Empréstimos</div>
+                    <div className="text-sm font-medium">{user.currentLoans} ativos</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase font-semibold">Multas</div>
                     {Number(user.fines) > 0 ? (
-                      <span className="text-destructive font-medium" data-testid={`text-fines-${user.id}`}>
-                        {user.fines} Kz
-                      </span>
+                      <div className="text-sm font-bold text-destructive">{user.fines} Kz</div>
                     ) : (
-                      <span className="text-muted-foreground">-</span>
+                      <div className="text-sm text-muted-foreground">Isento</div>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={statusConfig[String(user.isActive) as "true" | "false"].color} data-testid={`badge-status-${user.id}`}>
-                      {statusConfig[String(user.isActive) as "true" | "false"].text}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => console.log("Ver utilizador:", user.id)}
-                      data-testid={`button-view-${user.id}`}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Ver
-                    </Button>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => console.log("Ver utilizador:", user.id)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Detalhes
+                  </Button>
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Utilizador</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Empréstimos Atuais</TableHead>
+                <TableHead>Multas</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    Nenhum utilizador encontrado
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                filteredUsers.map((user) => (
+                  <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarFallback>
+                            {user.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium" data-testid={`text-name-${user.id}`}>{user.name}</div>
+                          <div className="text-sm text-muted-foreground">{user.email}</div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium capitalize">{userTypeConfig[getUserTypeKey(user.userType)].text}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {userTypeConfig[getUserTypeKey(user.userType)].limit}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell data-testid={`text-loans-${user.id}`}>{user.currentLoans}</TableCell>
+                    <TableCell>
+                      {Number(user.fines) > 0 ? (
+                        <span className="text-destructive font-medium" data-testid={`text-fines-${user.id}`}>
+                          {user.fines} Kz
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={statusConfig[String(user.isActive) as "true" | "false"].color} data-testid={`badge-status-${user.id}`}>
+                        {statusConfig[String(user.isActive) as "true" | "false"].text}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => console.log("Ver utilizador:", user.id)}
+                        data-testid={`button-view-${user.id}`}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );

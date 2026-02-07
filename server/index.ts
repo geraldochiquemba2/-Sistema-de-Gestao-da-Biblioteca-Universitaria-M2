@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
 import { insertUserSchema } from "@shared/schema";
+import { startCronJobs } from "./cron";
 
 const app = express();
 
@@ -133,6 +134,9 @@ app.use((req, res, next) => {
   } catch (err: any) {
     log(`Error ensuring default user: ${err.message}`);
   }
+
+  // Start Cron Jobs
+  startCronJobs();
 
   const server = await registerRoutes(app);
 

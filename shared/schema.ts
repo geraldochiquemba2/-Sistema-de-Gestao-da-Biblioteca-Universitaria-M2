@@ -112,49 +112,26 @@ export const renewalRequests = pgTable("renewal_requests", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Reviews table
+export const reviews = pgTable("reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  bookId: varchar("book_id").notNull().references(() => books.id),
+  rating: integer("rating").notNull(),
+  comment: text("comment"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Insert schemas
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertCategorySchema = createInsertSchema(categories).omit({
-  id: true,
-});
-
-export const insertBookSchema = createInsertSchema(books).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertLoanSchema = createInsertSchema(loans).omit({
-  id: true,
-  loanDate: true,
-  createdAt: true,
-});
-
-export const insertReservationSchema = createInsertSchema(reservations).omit({
-  id: true,
-  reservationDate: true,
-  createdAt: true,
-});
-
-export const insertFineSchema = createInsertSchema(fines).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertLoanRequestSchema = createInsertSchema(loanRequests).omit({
-  id: true,
-  requestDate: true,
-  createdAt: true,
-});
-
-export const insertRenewalRequestSchema = createInsertSchema(renewalRequests).omit({
-  id: true,
-  requestDate: true,
-  createdAt: true,
-});
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });
+export const insertBookSchema = createInsertSchema(books).omit({ id: true, createdAt: true });
+export const insertLoanSchema = createInsertSchema(loans).omit({ id: true, createdAt: true, loanDate: true, returnDate: true, renewalCount: true });
+export const insertReservationSchema = createInsertSchema(reservations).omit({ id: true, createdAt: true, status: true, notificationDate: true, expirationDate: true });
+export const insertFineSchema = createInsertSchema(fines).omit({ id: true, createdAt: true });
+export const insertLoanRequestSchema = createInsertSchema(loanRequests).omit({ id: true, requestDate: true, createdAt: true });
+export const insertRenewalRequestSchema = createInsertSchema(renewalRequests).omit({ id: true, requestDate: true, createdAt: true });
+export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -180,3 +157,6 @@ export type InsertLoanRequest = z.infer<typeof insertLoanRequestSchema>;
 
 export type RenewalRequest = typeof renewalRequests.$inferSelect;
 export type InsertRenewalRequest = z.infer<typeof insertRenewalRequestSchema>;
+
+export type Review = typeof reviews.$inferSelect;
+export type InsertReview = z.infer<typeof insertReviewSchema>;

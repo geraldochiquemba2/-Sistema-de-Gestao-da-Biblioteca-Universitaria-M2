@@ -1,9 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertBookSchema, insertUserSchema, insertLoanSchema, insertReservationSchema, insertFineSchema, insertCategorySchema } from "@shared/schema";
+import { insertBookSchema, insertUserSchema, insertLoanSchema, insertReservationSchema, insertFineSchema, insertCategorySchema, insertReviewSchema } from "@shared/schema";
 import OpenAI from "openai";
 import { createWorker } from "tesseract.js";
+import { sendLoanConfirmation, sendRenewalRequestAlert, sendRenewalDecision } from "./email";
+import { z } from "zod";
 
 // Initialize OpenAI only if API key is present
 const openai = new OpenAI({
@@ -474,14 +476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/loans", async (req, res) => {
     try {
-      const { userId, bookId } = req.body;
-
-      // Validate loan eligibility
-      const eligibility = await canUserLoan(userId, bookId);
-      if (!eligibility.canLoan) {
-        return res.status(400).json({ message: eligibility.reason });
-      }
-
+      const { userId, bookId } = insertLoanSchema.parse(req.body);
       const user = await storage.getUser(userId);
       const book = await storage.getBook(bookId);
 
@@ -489,7 +484,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Utilizador ou livro não encontrado" });
       }
 
-      // Calculate due date based on user type and book tag
+      // Check if user can loan
+      const eligibility = await canUserLoan(userId, bookId);
+      if (!eligibility.canLoan) {
+        return res.status(400).json({ message: eligibility.reason });
+      }
+
+      // Calculate due date
       const dueDate = calculateDueDate(user.userType, book.tag);
 
       // Create loan
@@ -498,7 +499,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bookId,
         dueDate,
         status: "active",
-        returnDate: null,
         renewalCount: 0,
       });
 
@@ -507,9 +507,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         availableCopies: book.availableCopies - 1,
       });
 
+      // Send email confirmation
+      try {
+        await sendLoanConfirmation(user, book, dueDate);
+      } catch (emailError) {
+        console.error("Failed to send loan confirmation email:", emailError);
+      }
+
       res.status(201).json(loan);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message || "Erro ao criar empréstimo" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Erro ao criar empréstimo" });
+      }
     }
   });
 
@@ -1232,6 +1243,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notes: null,
       });
 
+      // Send alert (to admin, or user for demo)
+      try {
+        const loan = await storage.getLoan(loanId);
+        const user = await storage.getUser(userId);
+        const book = loan ? await storage.getBook(loan.bookId) : null;
+
+        if (user && book && loan) {
+          await sendRenewalRequestAlert(user, book, loan);
+        }
+      } catch (emailError) {
+        console.error("Failed to send renewal alert:", emailError);
+      }
+
       res.status(201).json(request);
     } catch (error: any) {
       res.status(400).json({ message: error.message || "Erro ao criar solicitação de renovação" });
@@ -1270,6 +1294,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reviewDate: new Date(),
       });
 
+      // Send approval email
+      try {
+        await sendRenewalDecision(user, book, true, newDueDate);
+      } catch (emailError) {
+        console.error("Failed to send renewal decision email:", emailError);
+      }
+
       res.json({ message: "Renovação aprovada", newDueDate });
     } catch (error: any) {
       res.status(400).json({ message: error.message || "Erro ao aprovar renovação" });
@@ -1283,12 +1314,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Solicitação não encontrada" });
       }
 
+      const loan = await storage.getLoan(request.loanId);
+      const user = loan ? await storage.getUser(loan.userId) : null;
+      const book = loan ? await storage.getBook(loan.bookId) : null;
+
       await storage.updateRenewalRequest(request.id, {
         status: "rejected",
         reviewedBy: req.body.reviewedBy,
         reviewDate: new Date(),
         notes: req.body.notes || null,
       });
+
+      // Send rejection email
+      if (user && book) {
+        try {
+          await sendRenewalDecision(user, book, false);
+        } catch (emailError) {
+          console.error("Failed to send renewal rejection email:", emailError);
+        }
+      }
 
       res.json({ message: "Renovação rejeitada" });
     } catch (error) {
@@ -1417,6 +1461,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Erro ao buscar no repositório externo" });
     }
   });
+
+  // Reviews Routes
+  app.post("/api/reviews", async (req, res) => {
+    try {
+      const reviewData = insertReviewSchema.parse(req.body);
+      const review = await storage.createReview(reviewData);
+      res.status(201).json(review);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Erro ao criar avaliação" });
+      }
+    }
+  });
+
+  app.get("/api/books/:bookId/reviews", async (req, res) => {
+    try {
+      const reviews = await storage.getReviewsByBook(req.params.bookId);
+      // Fetch user names for each review
+      const reviewsWithUser = await Promise.all(reviews.map(async (review) => {
+        const user = await storage.getUser(review.userId);
+        return {
+          ...review,
+          userName: user ? user.name : "Utilizador Desconhecido"
+        };
+      }));
+      res.json(reviewsWithUser);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar avaliações" });
+    }
+  });
+
 
   const httpServer = createServer(app);
   return httpServer;

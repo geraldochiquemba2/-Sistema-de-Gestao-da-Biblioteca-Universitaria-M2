@@ -46,22 +46,30 @@ export default function StudentLoans() {
     enabled: !!user?.id,
   });
 
-  const renewLoanMutation = useMutation({
+  const { data: renewalRequests } = useQuery({
+    queryKey: ["/api/renewal-requests", { userId: user?.id, status: "pending" }],
+    enabled: !!user?.id,
+  });
+
+  const requestRenewalMutation = useMutation({
     mutationFn: async (loanId: string) => {
-      const response = await apiRequest("POST", `/api/loans/${loanId}/renew`, {});
+      const response = await apiRequest("POST", "/api/renewal-requests", {
+        loanId,
+        userId: user?.id,
+      });
       return await response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Empréstimo renovado!",
-        description: "O prazo de devolução foi estendido com sucesso.",
+        title: "Solicitação enviada!",
+        description: "O pedido de renovação foi enviado para análise do administrador.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/loans/user", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/renewal-requests"] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
-        title: "Erro ao renovar",
-        description: error.message || "Não foi possível renovar o empréstimo.",
+        title: "Erro ao solicitar renovação",
+        description: error.message || "Não foi possível enviar a solicitação.",
         variant: "destructive",
       });
     },
@@ -93,6 +101,7 @@ export default function StudentLoans() {
 
   const activeLoans = (loans || []).filter((l) => l.status === "active");
   const pendingRequests = Array.isArray(loanRequests) ? loanRequests : [];
+  const pendingRenewals = Array.isArray(renewalRequests) ? renewalRequests : [];
 
   const getLoanBook = (bookId: string) => {
     return books?.find((b) => b.id === bookId);
@@ -130,10 +139,6 @@ export default function StudentLoans() {
               <p className="text-sm text-muted-foreground">Gerencie seus livros emprestados</p>
             </div>
           </div>
-          <Button variant="outline" onClick={logout} data-testid="button-logout">
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
         </div>
       </header>
 
@@ -177,6 +182,7 @@ export default function StudentLoans() {
                 const book = getLoanBook(loan.bookId);
                 const daysUntilDue = getDaysUntilDue(loan.dueDate);
                 const overdue = isOverdue(loan.dueDate);
+                const hasPendingRenewal = pendingRenewals.some((r: any) => r.loanId === loan.id && r.status === 'pending');
 
                 if (!book) return null;
 
@@ -246,19 +252,24 @@ export default function StudentLoans() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => renewLoanMutation.mutate(loan.id)}
-                          disabled={renewLoanMutation.isPending || loan.renewalCount >= 2}
+                          onClick={() => requestRenewalMutation.mutate(loan.id)}
+                          disabled={requestRenewalMutation.isPending || loan.renewalCount >= 2 || hasPendingRenewal}
                           data-testid={`button-renew-${loan.id}`}
                         >
-                          {renewLoanMutation.isPending ? (
+                          {hasPendingRenewal ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Solicitação Pendente
+                            </>
+                          ) : requestRenewalMutation.isPending ? (
                             <>
                               <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                              Renovando...
+                              Solicitando...
                             </>
                           ) : (
                             <>
                               <RefreshCw className="h-4 w-4 mr-2" />
-                              Renovar Empréstimo
+                              Solicitar Renovação
                             </>
                           )}
                         </Button>

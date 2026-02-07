@@ -56,6 +56,10 @@ export default function Loans() {
     queryKey: ["/api/loan-requests"],
   });
 
+  const { data: renewalRequests, isLoading: renewalRequestsLoading } = useQuery<any[]>({
+    queryKey: ["/api/renewal-requests"],
+  });
+
   const { data: users } = useQuery<any[]>({
     queryKey: ["/api/users"],
   });
@@ -76,6 +80,7 @@ export default function Loans() {
   const overdueLoans = loans?.filter(l => l.status === "active" && new Date(l.dueDate) < new Date()) || [];
   const returnedLoans = loans?.filter(l => l.status === "returned") || [];
   const pendingRequests = requests?.filter(r => r.status === "pending") || [];
+  const pendingRenewals = renewalRequests?.filter(r => r.status === "pending") || [];
 
   const createLoanMutation = useMutation({
     mutationFn: async (data: LoanFormValues) => {
@@ -142,6 +147,32 @@ export default function Loans() {
       toast({ title: "Solicitação rejeitada" });
     } catch (error) {
       toast({ title: "Erro ao rejeitar", variant: "destructive" });
+    }
+  };
+
+  const handleApproveRenewal = async (id: string) => {
+    try {
+      // Assuming logged in user is the reviewer (admin)
+      await apiRequest("POST", `/api/renewal-requests/${id}/approve`, { reviewedBy: 1 }); // Replace 1 with actual admin ID if available from auth context, or backend handles it
+      queryClient.invalidateQueries({ queryKey: ["/api/renewal-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loans"] });
+      toast({ title: "Renovação aprovada!" });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao aprovar renovação",
+        description: error.message || "Tente novamente",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRejectRenewal = async (id: string) => {
+    try {
+      await apiRequest("POST", `/api/renewal-requests/${id}/reject`, { reviewedBy: 1 });
+      queryClient.invalidateQueries({ queryKey: ["/api/renewal-requests"] });
+      toast({ title: "Renovação rejeitada" });
+    } catch (error) {
+      toast({ title: "Erro ao rejeitar renovação", variant: "destructive" });
     }
   };
 
@@ -273,10 +304,10 @@ export default function Loans() {
             Ativos ({activeLoans.length})
           </TabsTrigger>
           <TabsTrigger value="requests" data-testid="tab-pending-requests" className="relative">
-            Solicitações ({pendingRequests.length})
-            {pendingRequests.length > 0 && (
+            Solicitações ({pendingRequests.length + pendingRenewals.length})
+            {(pendingRequests.length + pendingRenewals.length) > 0 && (
               <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                {pendingRequests.length}
+                {pendingRequests.length + pendingRenewals.length}
               </span>
             )}
           </TabsTrigger>
@@ -297,67 +328,140 @@ export default function Loans() {
           />
         </TabsContent>
 
-        <TabsContent value="requests" className="space-y-4">
-          <div className="rounded-md border bg-card">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="p-3 text-left font-medium">Utilizador</th>
-                    <th className="p-3 text-left font-medium">Livro Solicitado</th>
-                    <th className="p-3 text-left font-medium">Data do Pedido</th>
-                    <th className="p-3 text-right font-medium">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {pendingRequests.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="p-8 text-center text-muted-foreground">
-                        Nenhuma solicitação pendente
-                      </td>
+        <TabsContent value="requests" className="space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Novos Empréstimos</h3>
+            <div className="rounded-md border bg-card">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="p-3 text-left font-medium">Utilizador</th>
+                      <th className="p-3 text-left font-medium">Livro Solicitado</th>
+                      <th className="p-3 text-left font-medium">Data do Pedido</th>
+                      <th className="p-3 text-right font-medium">Ações</th>
                     </tr>
-                  ) : (
-                    pendingRequests.map((req) => {
-                      const user = users?.find(u => u.id === req.userId);
-                      const book = books?.find(b => b.id === req.bookId);
-                      return (
-                        <tr key={req.id} className="hover:bg-muted/30 transition-colors">
-                          <td className="p-3">
-                            <span className="font-medium text-primary">{user?.name || "..."}</span>
-                            <div className="text-xs text-muted-foreground capitalize">{user?.userType}</div>
-                          </td>
-                          <td className="p-3">
-                            <span className="font-medium">{book?.title || "..."}</span>
-                            <div className="text-xs text-muted-foreground">ISBN: {book?.isbn || "N/A"}</div>
-                          </td>
-                          <td className="p-3 text-muted-foreground">
-                            {format(new Date(req.requestDate), "dd/MM/yyyy HH:mm")}
-                          </td>
-                          <td className="p-3 text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-destructive hover:bg-destructive/10"
-                                onClick={() => handleRejectRequest(req.id)}
-                              >
-                                <X className="h-4 w-4 mr-1" /> Rejeitar
-                              </Button>
-                              <Button
-                                size="sm"
-                                className="bg-chart-2 hover:bg-chart-2/90"
-                                onClick={() => handleApproveRequest(req.id)}
-                              >
-                                <Check className="h-4 w-4 mr-1" /> Aprovar
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {pendingRequests.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                          Nenhuma solicitação de empréstimo pendente
+                        </td>
+                      </tr>
+                    ) : (
+                      pendingRequests.map((req) => {
+                        const user = users?.find(u => u.id === req.userId);
+                        const book = books?.find(b => b.id === req.bookId);
+                        return (
+                          <tr key={req.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="p-3">
+                              <span className="font-medium text-primary">{user?.name || "..."}</span>
+                              <div className="text-xs text-muted-foreground capitalize">{user?.userType}</div>
+                            </td>
+                            <td className="p-3">
+                              <span className="font-medium">{book?.title || "..."}</span>
+                              <div className="text-xs text-muted-foreground">ISBN: {book?.isbn || "N/A"}</div>
+                            </td>
+                            <td className="p-3 text-muted-foreground">
+                              {format(new Date(req.requestDate), "dd/MM/yyyy HH:mm")}
+                            </td>
+                            <td className="p-3 text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleRejectRequest(req.id)}
+                                >
+                                  <X className="h-4 w-4 mr-1" /> Rejeitar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="bg-chart-2 hover:bg-chart-2/90"
+                                  onClick={() => handleApproveRequest(req.id)}
+                                >
+                                  <Check className="h-4 w-4 mr-1" /> Aprovar
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Solicitações de Renovação</h3>
+            <div className="rounded-md border bg-card">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="p-3 text-left font-medium">Utilizador</th>
+                      <th className="p-3 text-left font-medium">Livro / Empréstimo</th>
+                      <th className="p-3 text-left font-medium">Data do Pedido</th>
+                      <th className="p-3 text-right font-medium">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {pendingRenewals.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                          Nenhuma solicitação de renovação pendente
+                        </td>
+                      </tr>
+                    ) : (
+                      pendingRenewals.map((req: any) => {
+                        const user = users?.find(u => u.id === req.userId);
+                        const loan = loans?.find(l => l.id === req.loanId);
+                        const book = books?.find(b => b.id === loan?.bookId);
+
+                        return (
+                          <tr key={req.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="p-3">
+                              <span className="font-medium text-primary">{user?.name || "..."}</span>
+                              <div className="text-xs text-muted-foreground capitalize">{user?.userType}</div>
+                            </td>
+                            <td className="p-3">
+                              <span className="font-medium">{book?.title || "..."}</span>
+                              <div className="text-xs text-muted-foreground">
+                                Vencimento: {loan?.dueDate ? format(new Date(loan.dueDate), "dd/MM/yyyy") : "N/A"}
+                              </div>
+                            </td>
+                            <td className="p-3 text-muted-foreground">
+                              {req.requestDate ? format(new Date(req.requestDate), "dd/MM/yyyy HH:mm") : "-"}
+                            </td>
+                            <td className="p-3 text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleRejectRenewal(req.id)}
+                                >
+                                  <X className="h-4 w-4 mr-1" /> Rejeitar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="bg-chart-2 hover:bg-chart-2/90"
+                                  onClick={() => handleApproveRenewal(req.id)}
+                                >
+                                  <Check className="h-4 w-4 mr-1" /> Aprovar
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </TabsContent>
