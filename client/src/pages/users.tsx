@@ -23,6 +23,7 @@ import {
 
 import { useQuery } from "@tanstack/react-query";
 import { User } from "@shared/schema";
+import { UserDetailsDialog } from "@/components/UserDetailsDialog";
 
 // Helper type for the enriched user data
 type UserWithStats = User & {
@@ -53,6 +54,8 @@ const statusConfig = {
 export default function Users() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const { data: users, isLoading } = useQuery<UserWithStats[]>({
     queryKey: ["/api/users"],
@@ -159,7 +162,10 @@ export default function Users() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => console.log("Ver utilizador:", user.id)}
+                    onClick={() => {
+                      setSelectedUserId(user.id);
+                      setIsDetailsOpen(true);
+                    }}
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     Detalhes
@@ -237,7 +243,10 @@ export default function Users() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => console.log("Ver utilizador:", user.id)}
+                        onClick={() => {
+                          setSelectedUserId(user.id);
+                          setIsDetailsOpen(true);
+                        }}
                         data-testid={`button-view-${user.id}`}
                       >
                         <Eye className="h-4 w-4 mr-1" />
@@ -251,6 +260,12 @@ export default function Users() {
           </Table>
         </div>
       </div>
+
+      <UserDetailsDialog
+        userId={selectedUserId}
+        open={isDetailsOpen}
+        onOpenChange={setIsDetailsOpen}
+      />
     </div>
   );
 }

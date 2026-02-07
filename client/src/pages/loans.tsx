@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { UserDetailsDialog } from "@/components/UserDetailsDialog";
 
 import {
   Dialog,
@@ -46,6 +47,8 @@ type LoanFormValues = z.infer<typeof loanFormSchema>;
 export default function Loans() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoanDialogOpen, setIsLoanDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: loans, isLoading: loansLoading } = useQuery<Loan[]>({
@@ -330,7 +333,13 @@ export default function Loans() {
             loans={filterLoans(activeLoans)}
             onReturn={handleReturn}
             onRenew={handleRenew}
-            onViewUser={(id) => console.log("Ver utilizador:", id)}
+            onViewUser={(loanId) => {
+              const loan = loans?.find(l => l.id === loanId);
+              if (loan) {
+                setSelectedUserId(loan.userId);
+                setIsUserDetailsOpen(true);
+              }
+            }}
           />
         </TabsContent>
 
@@ -489,17 +498,35 @@ export default function Loans() {
             loans={filterLoans(overdueLoans)}
             onReturn={handleReturn}
             onRenew={handleRenew}
-            onViewUser={(id) => console.log("Ver utilizador:", id)}
+            onViewUser={(loanId) => {
+              const loan = loans?.find(l => l.id === loanId);
+              if (loan) {
+                setSelectedUserId(loan.userId);
+                setIsUserDetailsOpen(true);
+              }
+            }}
           />
         </TabsContent>
 
         <TabsContent value="returned" className="space-y-4">
           <LoanTable
             loans={filterLoans(returnedLoans)}
-            onViewUser={(id) => console.log("Ver utilizador:", id)}
+            onViewUser={(loanId) => {
+              const loan = loans?.find(l => l.id === loanId);
+              if (loan) {
+                setSelectedUserId(loan.userId);
+                setIsUserDetailsOpen(true);
+              }
+            }}
           />
         </TabsContent>
       </Tabs>
+
+      <UserDetailsDialog
+        userId={selectedUserId}
+        open={isUserDetailsOpen}
+        onOpenChange={setIsUserDetailsOpen}
+      />
     </div>
   );
 }

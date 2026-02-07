@@ -13,6 +13,7 @@ import { format, differenceInDays } from "date-fns";
 
 export interface Loan {
   id: string;
+  userId: string;
   userName: string;
   userType: "docente" | "estudante" | "funcionario";
   bookId: string;
