@@ -23,7 +23,7 @@ O sistema segue a metodologia **RUPE (Rational Unified Process Estendido)** e of
 - **Renovações Online**: Até 2 renovações por livro (se não houver reservas pendentes).
 
 ### 2. Recursos de Inteligência Artificial (IA)
-- **OCR Integrado (OpenAI)**: Reconhecimento de texto em imagens de capas para registo rápido.
+- **OCR Integrado (Groq Vision)**: Reconhecimento de texto em imagens de capas para registo rápido usando Llama-3.2.
 - **Assistente Groq**: Mentor virtual inteligente (Llama-3.3) para suporte imediato em todas as páginas.
 - **Sistema de Avaliações**: Classificação por estrelas e comentários para incentivar a comunidade de leitores.
 

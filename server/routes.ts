@@ -853,22 +853,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/books/ocr", async (req, res) => {
     try {
-      if (!isAIEnabled) {
-        return res.status(503).json({ message: "Funcionalidade indisponível: Chave da OpenAI não configurada no servidor." });
-      }
-
       const { image } = req.body;
       if (!image) {
         return res.status(400).json({ message: "Imagem não fornecida" });
       }
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const response = await groq.chat.completions.create({
+        model: "llama-3.2-11b-vision-preview",
         messages: [
           {
             role: "user",
             content: [
-              { type: "text", text: "Você é um bibliotecário especialista. Analise esta imagem da capa de um livro e extraia os dados para um sistema de gestão. O título principal é 'A Cabra da Minha Mãe' e o subtítulo é 'O segredo da riqueza'. O autor é Ricardo Kaniama. Retorne APENAS um JSON com os campos: title, author, isbn, publisher, yearPublished, description. Se não encontrar ISBN ou ano na imagem, deixe como null ou string vazia. Se houver mais de um título, use o mais proeminente." },
+              { type: "text", text: "Você é um bibliotecário especialista. Analise esta imagem da capa de um livro e extraia os dados para um sistema de gestão. Retorne APENAS um objeto JSON (sem markdown, sem explicações) com os seguintes campos: title, author, isbn, publisher, yearPublished, description. Se não encontrar algum campo, use null." },
               {
                 type: "image_url",
                 image_url: {
@@ -878,18 +874,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ],
           },
         ],
-        response_format: { type: "json_object" },
+        temperature: 0.1,
       });
 
-      const content = response.choices[0].message.content;
-      if (!content) {
-        throw new Error("Falha ao extrair dados da imagem");
-      }
+      let content = response.choices[0].message.content || "";
+      // Strip markdown code blocks if present
+      content = content.replace(/```json\n?/, "").replace(/```/, "").trim();
 
-      res.json(JSON.parse(content));
+      try {
+        const parsed = JSON.parse(content);
+        res.json(parsed);
+      } catch (parseError) {
+        console.error("Failed to parse AI response as JSON:", content);
+        throw new Error("O assistente não conseguiu formatar os dados corretamente.");
+      }
     } catch (error: any) {
-      console.error("OCR Error:", error);
-      res.status(500).json({ message: "Erro ao processar imagem: " + error.message });
+      console.error("OCR Error (Groq):", error);
+      res.status(500).json({ message: "Erro ao processar imagem com Groq Vision: " + error.message });
     }
   });
 
