@@ -43,10 +43,11 @@ O projeto está estruturado em fases iterativas:
 
 ---
 
-## 👨‍💻 Autor
-**Judson Paiva**  
-📧 [judson.paiva@isptec.co.ao](mailto:judson.paiva@isptec.co.ao)  
-🎓 Engenharia Informática - ISPTEC
+## 👨‍💻 Autores (Turma M2 ENG INF, Ano-3ª)
+- **Geraldo Abreu Leão Chiquemba** (20230043)
+- **Kialenguluka Kialenguluka Tuavile** (20231633)
+
+**Orientador:** Prof. Judson Paiva
 
 ---
 *Este projeto foi desenvolvido como parte integrante da avaliação de Engenharia de Software I.*
