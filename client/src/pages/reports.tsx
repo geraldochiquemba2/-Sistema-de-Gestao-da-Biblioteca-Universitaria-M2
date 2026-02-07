@@ -44,18 +44,15 @@ export default function Reports() {
 
   // We can reuse /api/users to get most active users if we sort them, or a new endpoint.
   // For now, let's fetch all users, which now includes 'currentLoans', and sort client side.
-  const { data: users, isLoading: usersLoading } = useQuery<any[]>({
-    queryKey: ["/api/users"],
+  const { data: activeUsers, isLoading: usersLoading } = useQuery<any[]>({
+    queryKey: ["/api/reports/active-users"],
   });
 
-  const activeUsers = users
-    ?.sort((a, b) => b.currentLoans - a.currentLoans)
-    .slice(0, 5)
-    .map(u => ({
-      name: u.name,
-      loans: u.currentLoans,
-      type: u.userType
-    })) || [];
+  const topUsers = activeUsers?.map(u => ({
+    name: u.user.name,
+    loans: u.loanCount,
+    type: u.user.userType
+  })) || [];
 
   if (statsLoading || categoriesLoading || usersLoading) {
     return <div className="p-6">Carregando relatórios...</div>;
@@ -166,7 +163,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {activeUsers.map((user, index) => (
+              {topUsers.map((user, index) => (
                 <div key={index} className="flex items-center gap-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold flex-shrink-0">
                     {index + 1}
