@@ -864,7 +864,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           {
             role: "user",
             content: [
-              { type: "text", text: "Você é um bibliotecário especialista. Analise esta imagem da capa de um livro e extraia os dados para um sistema de gestão. Retorne APENAS um objeto JSON (sem markdown, sem explicações) com os seguintes campos: title, author, isbn, publisher, yearPublished, description. Se não encontrar algum campo, use null." },
+              { type: "text", text: "Você é um bibliotecário especialista e erudito. Analise esta imagem da capa de um livro. \n              1. Primeiro, identifique claramente o livro através do que está escrito.\n              2. Use o seu vasto conhecimento interno sobre literatura para preencher todos os campos, mesmo os que não estão visíveis na imagem (como ISBN, editora original, ano de publicação e uma descrição rica).\n              3. Retorne APENAS um objeto JSON (sem markdown, sem explicações) com os seguintes campos: title, author, isbn, publisher, yearPublished, description. \n              4. Seja preciso. Se o livro tiver várias edições, use a mais comum ou a original." },
               {
                 type: "image_url",
                 image_url: {
