@@ -186,7 +186,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User routes
+  // Debug Route
+  app.get("/api/debug/all-data", async (req, res) => {
+    try {
+      const allLoans = await storage.getAllLoans();
+      const allRequests = await storage.getAllLoanRequests();
+      const allUsers = await storage.getAllUsers();
+      res.json({
+        users: allUsers,
+        loans: allLoans,
+        requests: allRequests
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
   app.get("/api/users", async (req, res) => {
     try {
       const users = await storage.getAllUsers();
@@ -431,6 +445,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(loansWithDetails);
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar empréstimos" });
+    }
+  });
+
+  // Specific route for user loans (to match frontend query keys)
+  app.get("/api/loans/user/:userId", async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      // Note: userId is a UUID string, do not parse as int
+      const loans = await storage.getLoansByUser(userId);
+
+      const loansWithDetails = await Promise.all(loans.map(async (loan) => {
+        const book = await storage.getBook(loan.bookId);
+        const fine = await storage.getFine(loan.id).catch(() => undefined);
+
+        return {
+          ...loan,
+          book,
+          fine: fine ? parseFloat(fine.amount as any) : undefined
+        };
+      }));
+
+      res.json(loansWithDetails);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar empréstimos do usuário" });
     }
   });
 
@@ -686,6 +724,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(fines);
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar multas" });
+    }
+  });
+
+  // Specific route for user fines (to match frontend query keys)
+  app.get("/api/fines/user/:userId", async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      // Note: userId is a UUID string, do not parse as int
+      const fines = await storage.getFinesByUser(userId);
+      res.json(fines);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar multas do usuário" });
     }
   });
 
