@@ -20,11 +20,9 @@ const groq = new OpenAI({
 });
 
 // Helper check for AI availability
-const isAIEnabled = !!process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-const isGroqEnabled = true;
-
-// Helper check for AI availability
-const isAIEnabledCheck = !!process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+const isAIEnabled = !!process.env.AI_INTEGRATIONS_OPENAI_API_KEY || !!process.env.GROQ_API_KEY;
+const isGroqEnabled = !!process.env.GROQ_API_KEY;
+const isOpenAIEnabled = !!process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
 
 // Business rules constants
 const LOAN_RULES = {
@@ -1135,7 +1133,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.updateLoanRequest(request.id, {
         status: "approved",
-        reviewedBy: req.body.reviewedBy, // In a real app we'd get this from session
         reviewDate: new Date(),
       });
 
@@ -1202,7 +1199,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.updateLoanRequest(request.id, {
         status: "rejected",
-        reviewedBy: req.body.reviewedBy,
         reviewDate: new Date(),
         notes: req.body.notes || null,
       });
