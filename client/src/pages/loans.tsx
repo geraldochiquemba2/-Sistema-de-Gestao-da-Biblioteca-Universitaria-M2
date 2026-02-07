@@ -153,7 +153,7 @@ export default function Loans() {
   const handleApproveRenewal = async (id: string) => {
     try {
       // Assuming logged in user is the reviewer (admin)
-      await apiRequest("POST", `/api/renewal-requests/${id}/approve`, { reviewedBy: 1 }); // Replace 1 with actual admin ID if available from auth context, or backend handles it
+      await apiRequest("POST", `/api/renewal-requests/${id}/approve`, {});
       queryClient.invalidateQueries({ queryKey: ["/api/renewal-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/loans"] });
       toast({ title: "Renovação aprovada!" });
@@ -168,7 +168,7 @@ export default function Loans() {
 
   const handleRejectRenewal = async (id: string) => {
     try {
-      await apiRequest("POST", `/api/renewal-requests/${id}/reject`, { reviewedBy: 1 });
+      await apiRequest("POST", `/api/renewal-requests/${id}/reject`, {});
       queryClient.invalidateQueries({ queryKey: ["/api/renewal-requests"] });
       toast({ title: "Renovação rejeitada" });
     } catch (error) {
