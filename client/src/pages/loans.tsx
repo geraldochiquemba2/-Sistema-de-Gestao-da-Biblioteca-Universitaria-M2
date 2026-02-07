@@ -3,7 +3,7 @@ import { LoanTable, type Loan } from "@/components/loan-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Scan, Check, X, BookOpen } from "lucide-react";
+import { Plus, Search, Check, X, BookOpen } from "lucide-react";
 import { format } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -203,10 +203,7 @@ export default function Loans() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" data-testid="button-scan-barcode">
-            <Scan className="h-4 w-4 mr-2" />
-            Digitalizar Código
-          </Button>
+
 
           <Dialog open={isLoanDialogOpen} onOpenChange={setIsLoanDialogOpen}>
             <DialogTrigger asChild>

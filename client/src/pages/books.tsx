@@ -55,6 +55,7 @@ export default function Books() {
   const [isScanning, setIsScanning] = useState(false);
   const [isSearchingWeb, setIsSearchingWeb] = useState(false);
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
   const { toast } = useToast();
 
   const handleWebSearch = async () => {
@@ -205,7 +206,11 @@ export default function Books() {
   };
 
   const { data: books, isLoading } = useQuery<any[]>({
-    queryKey: searchQuery ? ["/api/books", { search: searchQuery }] : ["/api/books"],
+    queryKey: selectedCategoryFilter !== "all"
+      ? ["/api/books", { search: searchQuery, categoryId: selectedCategoryFilter }]
+      : searchQuery
+        ? ["/api/books", { search: searchQuery }]
+        : ["/api/books"],
   });
 
   const { data: categories } = useQuery<any[]>({
@@ -597,7 +602,7 @@ export default function Books() {
         </Dialog>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -608,6 +613,24 @@ export default function Books() {
             data-testid="input-search"
           />
         </div>
+        <Select
+          value={selectedCategoryFilter}
+          onValueChange={(val) => {
+            setSelectedCategoryFilter(val);
+          }}
+        >
+          <SelectTrigger className="w-full md:w-[200px]" data-testid="select-category-filter">
+            <SelectValue placeholder="Filtrar por Categoria" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as Categorias</SelectItem>
+            {categories?.map((cat) => (
+              <SelectItem key={cat.id} value={cat.id}>
+                {cat.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {isLoading ? (

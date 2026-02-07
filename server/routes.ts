@@ -1216,7 +1216,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId, status } = req.query;
       let requests;
 
-      if (userId && typeof userId === "string") {
+      if (userId && typeof userId === "string" && status && typeof status === "string") {
+        requests = await storage.getRenewalRequestsByUser(userId);
+        requests = requests.filter(r => r.status === status);
+      } else if (userId && typeof userId === "string") {
         requests = await storage.getRenewalRequestsByUser(userId);
       } else if (status && typeof status === "string") {
         requests = await storage.getRenewalRequestsByStatus(status);
@@ -1227,6 +1230,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(requests);
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar solicitações de renovação" });
+    }
+  });
+
+  app.delete("/api/renewal-requests/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteRenewalRequest(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Solicitação não encontrada" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao apagar solicitação de renovação" });
     }
   });
 
@@ -1491,6 +1506,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(reviewsWithUser);
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar avaliações" });
+    }
+  });
+
+  app.patch("/api/reviews/:id", async (req, res) => {
+    try {
+      const reviewData = insertReviewSchema.partial().parse(req.body);
+      const updatedReview = await storage.updateReview(req.params.id, reviewData);
+      if (!updatedReview) {
+        return res.status(404).json({ message: "Avaliação não encontrada" });
+      }
+      res.json(updatedReview);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Erro ao atualizar avaliação" });
+      }
+    }
+  });
+
+  app.delete("/api/reviews/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteReview(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Avaliação não encontrada" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao apagar avaliação" });
     }
   });
 

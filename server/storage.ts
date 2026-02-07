@@ -95,8 +95,12 @@ export interface IStorage {
   updateRenewalRequest(id: string, renewalRequest: Partial<InsertRenewalRequest>): Promise<RenewalRequest | undefined>;
 
   // Review methods
+  getReview(id: string): Promise<Review | undefined>;
   getReviewsByBook(bookId: string): Promise<Review[]>;
   createReview(review: InsertReview): Promise<Review>;
+  updateReview(id: string, review: Partial<InsertReview>): Promise<Review | undefined>;
+  deleteReview(id: string): Promise<boolean>;
+  deleteRenewalRequest(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -363,7 +367,17 @@ export class DatabaseStorage implements IStorage {
     return updatedRequest;
   }
 
+  async deleteRenewalRequest(id: string): Promise<boolean> {
+    const [deletedRequest] = await db.delete(renewalRequests).where(eq(renewalRequests.id, id)).returning();
+    return !!deletedRequest;
+  }
+
   // Review methods
+  async getReview(id: string): Promise<Review | undefined> {
+    const [review] = await db.select().from(reviews).where(eq(reviews.id, id));
+    return review;
+  }
+
   async getReviewsByBook(bookId: string): Promise<Review[]> {
     return await db.select().from(reviews).where(eq(reviews.bookId, bookId));
   }
@@ -371,6 +385,20 @@ export class DatabaseStorage implements IStorage {
   async createReview(review: InsertReview): Promise<Review> {
     const [newReview] = await db.insert(reviews).values(review).returning();
     return newReview;
+  }
+
+  async updateReview(id: string, reviewData: Partial<InsertReview>): Promise<Review | undefined> {
+    const [updatedReview] = await db
+      .update(reviews)
+      .set(reviewData)
+      .where(eq(reviews.id, id))
+      .returning();
+    return updatedReview;
+  }
+
+  async deleteReview(id: string): Promise<boolean> {
+    const [deletedReview] = await db.delete(reviews).where(eq(reviews.id, id)).returning();
+    return !!deletedReview;
   }
 }
 

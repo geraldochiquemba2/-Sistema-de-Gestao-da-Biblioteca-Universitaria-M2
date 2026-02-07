@@ -131,8 +131,22 @@ app.use((req, res, next) => {
       }
     }
 
+    // Seed default categories
+    const defaultCategories = [
+      "Direito", "Engenharia", "Informática", "Medicina",
+      "Psicologia", "Pedagogia", "Literatura Africana", "História", "Gestão"
+    ];
+
+    const existingCategories = await storage.getAllCategories();
+    for (const catName of defaultCategories) {
+      if (!existingCategories.find(c => c.name === catName)) {
+        log(`Seeding category: ${catName}...`);
+        await storage.createCategory({ name: catName, description: `Livros da área de ${catName}` });
+      }
+    }
+
   } catch (err: any) {
-    log(`Error ensuring default user: ${err.message}`);
+    log(`Error ensuring default data: ${err.message}`);
   }
 
   // Start Cron Jobs

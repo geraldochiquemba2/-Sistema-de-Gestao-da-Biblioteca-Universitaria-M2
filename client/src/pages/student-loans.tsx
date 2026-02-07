@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Calendar, ArrowLeft, RefreshCw, AlertCircle, LogOut, Clock } from "lucide-react";
+import { BookOpen, Calendar, ArrowLeft, RefreshCw, AlertCircle, LogOut, Clock, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, isPast, differenceInDays } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -70,6 +70,26 @@ export default function StudentLoans() {
       toast({
         title: "Erro ao solicitar renovação",
         description: error.message || "Não foi possível enviar a solicitação.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const cancelRenewalMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      await apiRequest("DELETE", `/api/renewal-requests/${requestId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Solicitação cancelada",
+        description: "O pedido de renovação foi removido.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/renewal-requests"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao cancelar",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -249,30 +269,50 @@ export default function StudentLoans() {
                         <div className="text-sm text-muted-foreground">
                           <span>Renovações: {loan.renewalCount}/2</span>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => requestRenewalMutation.mutate(loan.id)}
-                          disabled={requestRenewalMutation.isPending || loan.renewalCount >= 2 || hasPendingRenewal}
-                          data-testid={`button-renew-${loan.id}`}
-                        >
+                        <div className="flex items-center gap-2">
                           {hasPendingRenewal ? (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                              Solicitação Pendente
-                            </>
-                          ) : requestRenewalMutation.isPending ? (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                              Solicitando...
-                            </>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 py-1.5 px-3">
+                                <Clock className="h-3.5 w-3.5 mr-2 animate-pulse" />
+                                Solicitação Pendente
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2 flex items-center gap-1 border border-destructive/20"
+                                onClick={() => {
+                                  const request = pendingRenewals.find((r: any) => r.loanId === loan.id && r.status === 'pending');
+                                  if (request) cancelRenewalMutation.mutate(request.id);
+                                }}
+                                disabled={cancelRenewalMutation.isPending}
+                                title="Cancelar solicitação de renovação"
+                              >
+                                <X className="h-4 w-4" />
+                                <span className="text-xs">Cancelar</span>
+                              </Button>
+                            </div>
                           ) : (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                              Solicitar Renovação
-                            </>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => requestRenewalMutation.mutate(loan.id)}
+                              disabled={requestRenewalMutation.isPending || loan.renewalCount >= 2}
+                              data-testid={`button-renew-${loan.id}`}
+                            >
+                              {requestRenewalMutation.isPending ? (
+                                <>
+                                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                  Solicitando...
+                                </>
+                              ) : (
+                                <>
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                  Solicitar Renovação
+                                </>
+                              )}
+                            </Button>
                           )}
-                        </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
