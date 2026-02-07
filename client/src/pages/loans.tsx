@@ -3,12 +3,13 @@ import { LoanTable, type Loan } from "@/components/loan-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Check, X, BookOpen, Loader2 } from "lucide-react";
+import { Plus, Search, Check, X, BookOpen, Loader2, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UserDetailsDialog } from "@/components/UserDetailsDialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 import {
   Dialog,
@@ -33,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -77,6 +78,13 @@ export default function Loans() {
       userId: "",
       bookId: "",
     },
+  });
+
+  const { userId, bookId } = useWatch({ control: form.control });
+
+  const { data: eligibility, isLoading: eligibilityLoading } = useQuery<{ canLoan: boolean; reason?: string }>({
+    queryKey: ["/api/loans/check-eligibility", { userId, bookId }],
+    enabled: !!userId && !!bookId,
   });
 
   const activeLoans = loans?.filter(l => l.status === "active") || [];
@@ -281,10 +289,29 @@ export default function Loans() {
                       </FormItem>
                     )}
                   />
+
+                  {userId && bookId && eligibility && !eligibility.canLoan && (
+                    <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive py-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        {eligibility.reason}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {userId && bookId && eligibility?.canLoan && (
+                    <Alert className="bg-chart-2/5 border-chart-2/20 text-chart-2 py-2">
+                      <Check className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        Utilizador elegível para este empréstimo.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={createLoanMutation.isPending}
+                    disabled={createLoanMutation.isPending || (!!userId && !!bookId && eligibility?.canLoan === false)}
                     data-testid="button-submit-loan"
                   >
                     {createLoanMutation.isPending ? "Processando..." : "Confirmar Empréstimo"}

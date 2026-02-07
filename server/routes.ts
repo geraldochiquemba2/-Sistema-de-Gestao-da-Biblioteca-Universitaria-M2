@@ -510,9 +510,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/loans/check-eligibility", async (req, res) => {
+    try {
+      const { userId, bookId } = req.query;
+      if (!userId || !bookId) {
+        return res.status(400).json({ message: "userId e bookId são obrigatórios" });
+      }
+
+      const eligibility = await canUserLoan(userId as string, bookId as string);
+      res.json(eligibility);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao verificar elegibilidade" });
+    }
+  });
+
   app.post("/api/loans", async (req, res) => {
     try {
-      const { userId, bookId } = insertLoanSchema.parse(req.body);
+      // Use a schema that doesn't require dueDate for parsing the request body
+      const apiInsertLoanSchema = insertLoanSchema.omit({ dueDate: true });
+      const { userId, bookId } = apiInsertLoanSchema.parse(req.body);
       const user = await storage.getUser(userId);
       const book = await storage.getBook(bookId);
 
@@ -549,11 +565,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.status(201).json(loan);
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Dados inválidos", errors: error.errors });
       } else {
-        res.status(500).json({ message: "Erro ao criar empréstimo" });
+        console.error("Loan creation error:", error);
+        res.status(500).json({ message: error.message || "Erro ao criar empréstimo" });
       }
     }
   });
