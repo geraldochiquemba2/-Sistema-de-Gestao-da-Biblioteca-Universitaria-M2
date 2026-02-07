@@ -23,14 +23,15 @@ O sistema segue a metodologia **RUPE (Rational Unified Process Estendido)** e of
 - **Renovações Online**: Até 2 renovações por livro (se não houver reservas pendentes).
 
 ### 2. Recursos de Inteligência Artificial (IA)
-- **OCR Integrado**: Reconhecimento de texto em imagens de capas para registo rápido.
-- **Motor de Recomendação**: Sugestões de obras baseadas no histórico de leitura do utilizador.
-- **Chatbot de Apoio**: Mentor virtual para tirar dúvidas e consultar disponibilidade.
+- **OCR Integrado (OpenAI)**: Reconhecimento de texto em imagens de capas para registo rápido.
+- **Assistente Groq**: Mentor virtual inteligente (Llama-3.3) para suporte imediato em todas as páginas.
+- **Sistema de Avaliações**: Classificação por estrelas e comentários para incentivar a comunidade de leitores.
 
 ### 3. Inovação e BI
-- **Repositório Digital**: Pesquisa e download direto de obras em domínio público (Project Gutenberg/Open Library).
-- **Dashboards Analíticos**: Gráficos em tempo real sobre popularidade de categorias e saúde financeira (multas).
-- **UX Mobile Premium**: Interface responsiva com visualização em *cards* otimizada para telemóveis.
+- **Dashboards Dinâmicos**: Gráficos de popularidade por categoria, resumo financeiro e estatísticas de uso.
+- **Repositório Externo**: Pesquisa integrada com Project Gutenberg e Open Library.
+- **UX Mobile First**: Sistema de *cards* inteligentes que substituem tabelas em dispositivos móveis.
+- **Categorias Pré-definidas**: Organização do acervo por áreas do conhecimento (Direito, Engenharia, etc.).
 
 ---
 
@@ -46,6 +47,7 @@ O projeto está estruturado em fases iterativas:
 ## 👨‍💻 Autores (Turma M2 ENG INF, Ano-3ª)
 - **Geraldo Abreu Leão Chiquemba** (20230043)
 - **Kialenguluka Kialenguluka Tuavile** (20231633)
+- **Sebastião Chiquemba** (Workspace Owner)
 
 **Orientador:** Prof. Judson Paiva
 
