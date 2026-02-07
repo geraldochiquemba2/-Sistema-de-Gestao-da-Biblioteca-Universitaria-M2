@@ -28,6 +28,7 @@ import BookSearch from "@/pages/book-search";
 import ReadingHistory from "@/pages/reading-history";
 import Repository from "@/pages/repository";
 import NotFound from "@/pages/not-found";
+import { AIAssistant } from "@/components/AIAssistant";
 
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { logout, user } = useAuth();
@@ -179,6 +180,7 @@ export default function App() {
         <AuthProvider>
           <Router />
           <Toaster />
+          <AIAssistant />
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

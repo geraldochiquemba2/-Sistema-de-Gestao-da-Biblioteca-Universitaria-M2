@@ -35,7 +35,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  updateUser(id: string, user: Partial<InsertUser>): Promise<User | undefined>;
+  updateUser(id: string, user: Partial<User>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   deleteUser(id: string): Promise<boolean>;
 
@@ -44,7 +44,7 @@ export interface IStorage {
   getAllBooks(): Promise<Book[]>;
   searchBooks(query: string): Promise<Book[]>;
   createBook(book: InsertBook): Promise<Book>;
-  updateBook(id: string, book: Partial<InsertBook>): Promise<Book | undefined>;
+  updateBook(id: string, book: Partial<Book>): Promise<Book | undefined>;
   deleteBook(id: string): Promise<boolean>;
 
   // Category methods
@@ -60,7 +60,7 @@ export interface IStorage {
   getActiveLoans(): Promise<Loan[]>;
   getOverdueLoans(): Promise<Loan[]>;
   createLoan(loan: InsertLoan): Promise<Loan>;
-  updateLoan(id: string, loan: Partial<InsertLoan>): Promise<Loan | undefined>;
+  updateLoan(id: string, loan: Partial<Loan>): Promise<Loan | undefined>;
   deleteLoan(id: string): Promise<boolean>;
 
   // Reservation methods
@@ -69,14 +69,14 @@ export interface IStorage {
   getReservationsByUser(userId: string): Promise<Reservation[]>;
   getReservationsByBook(bookId: string): Promise<Reservation[]>;
   createReservation(reservation: InsertReservation): Promise<Reservation>;
-  updateReservation(id: string, reservation: Partial<InsertReservation>): Promise<Reservation | undefined>;
+  updateReservation(id: string, reservation: Partial<Reservation>): Promise<Reservation | undefined>;
 
   // Fine methods
   getFine(id: string): Promise<Fine | undefined>;
   getAllFines(): Promise<Fine[]>;
   getFinesByUser(userId: string): Promise<Fine[]>;
   createFine(fine: InsertFine): Promise<Fine>;
-  updateFine(id: string, fine: Partial<InsertFine>): Promise<Fine | undefined>;
+  updateFine(id: string, fine: Partial<Fine>): Promise<Fine | undefined>;
 
   // Loan Request methods
   getLoanRequest(id: string): Promise<LoanRequest | undefined>;
@@ -84,7 +84,7 @@ export interface IStorage {
   getLoanRequestsByUser(userId: string): Promise<LoanRequest[]>;
   getLoanRequestsByStatus(status: string): Promise<LoanRequest[]>;
   createLoanRequest(loanRequest: InsertLoanRequest): Promise<LoanRequest>;
-  updateLoanRequest(id: string, loanRequest: Partial<InsertLoanRequest>): Promise<LoanRequest | undefined>;
+  updateLoanRequest(id: string, loanRequest: Partial<LoanRequest>): Promise<LoanRequest | undefined>;
 
   // Renewal Request methods
   getRenewalRequest(id: string): Promise<RenewalRequest | undefined>;
@@ -92,13 +92,13 @@ export interface IStorage {
   getRenewalRequestsByUser(userId: string): Promise<RenewalRequest[]>;
   getRenewalRequestsByStatus(status: string): Promise<RenewalRequest[]>;
   createRenewalRequest(renewalRequest: InsertRenewalRequest): Promise<RenewalRequest>;
-  updateRenewalRequest(id: string, renewalRequest: Partial<InsertRenewalRequest>): Promise<RenewalRequest | undefined>;
+  updateRenewalRequest(id: string, renewalRequest: Partial<RenewalRequest>): Promise<RenewalRequest | undefined>;
 
   // Review methods
   getReview(id: string): Promise<Review | undefined>;
   getReviewsByBook(bookId: string): Promise<Review[]>;
   createReview(review: InsertReview): Promise<Review>;
-  updateReview(id: string, review: Partial<InsertReview>): Promise<Review | undefined>;
+  updateReview(id: string, review: Partial<Review>): Promise<Review | undefined>;
   deleteReview(id: string): Promise<boolean>;
   deleteRenewalRequest(id: string): Promise<boolean>;
 }
@@ -120,7 +120,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined> {
+  async updateUser(id: string, userData: Partial<User>): Promise<User | undefined> {
     const [updatedUser] = await db
       .update(users)
       .set(userData)
@@ -164,7 +164,7 @@ export class DatabaseStorage implements IStorage {
     return book;
   }
 
-  async updateBook(id: string, bookData: Partial<InsertBook>): Promise<Book | undefined> {
+  async updateBook(id: string, bookData: Partial<Book>): Promise<Book | undefined> {
     const [updatedBook] = await db
       .update(books)
       .set(bookData)
@@ -227,7 +227,7 @@ export class DatabaseStorage implements IStorage {
     return loan;
   }
 
-  async updateLoan(id: string, loanData: Partial<InsertLoan>): Promise<Loan | undefined> {
+  async updateLoan(id: string, loanData: Partial<Loan>): Promise<Loan | undefined> {
     const [updatedLoan] = await db
       .update(loans)
       .set(loanData)
@@ -264,7 +264,7 @@ export class DatabaseStorage implements IStorage {
     return reservation;
   }
 
-  async updateReservation(id: string, reservationData: Partial<InsertReservation>): Promise<Reservation | undefined> {
+  async updateReservation(id: string, reservationData: Partial<Reservation>): Promise<Reservation | undefined> {
     const [updatedReservation] = await db
       .update(reservations)
       .set(reservationData)
@@ -292,7 +292,7 @@ export class DatabaseStorage implements IStorage {
     return fine;
   }
 
-  async updateFine(id: string, fineData: Partial<InsertFine>): Promise<Fine | undefined> {
+  async updateFine(id: string, fineData: Partial<Fine>): Promise<Fine | undefined> {
     const [updatedFine] = await db
       .update(fines)
       .set(fineData)
@@ -326,7 +326,7 @@ export class DatabaseStorage implements IStorage {
     return request;
   }
 
-  async updateLoanRequest(id: string, loanRequestData: Partial<InsertLoanRequest>): Promise<LoanRequest | undefined> {
+  async updateLoanRequest(id: string, loanRequestData: Partial<LoanRequest>): Promise<LoanRequest | undefined> {
     const [updatedRequest] = await db
       .update(loanRequests)
       .set(loanRequestData)
@@ -358,7 +358,7 @@ export class DatabaseStorage implements IStorage {
     return request;
   }
 
-  async updateRenewalRequest(id: string, renewalRequestData: Partial<InsertRenewalRequest>): Promise<RenewalRequest | undefined> {
+  async updateRenewalRequest(id: string, renewalRequestData: Partial<RenewalRequest>): Promise<RenewalRequest | undefined> {
     const [updatedRequest] = await db
       .update(renewalRequests)
       .set(renewalRequestData)
@@ -387,7 +387,7 @@ export class DatabaseStorage implements IStorage {
     return newReview;
   }
 
-  async updateReview(id: string, reviewData: Partial<InsertReview>): Promise<Review | undefined> {
+  async updateReview(id: string, reviewData: Partial<Review>): Promise<Review | undefined> {
     const [updatedReview] = await db
       .update(reviews)
       .set(reviewData)

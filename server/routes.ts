@@ -13,8 +13,18 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+// Initialize Groq (using OpenAI SDK)
+const groq = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY || "dummy_key",
+  baseURL: "https://api.groq.com/openai/v1",
+});
+
 // Helper check for AI availability
 const isAIEnabled = !!process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+const isGroqEnabled = true;
+
+// Helper check for AI availability
+const isAIEnabledCheck = !!process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
 
 // Business rules constants
 const LOAN_RULES = {
@@ -498,8 +508,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         bookId,
         dueDate,
-        status: "active",
-        renewalCount: 0,
       });
 
       // Update book availability
@@ -697,9 +705,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const reservation = await storage.createReservation({
         userId,
         bookId,
-        status: "pending",
-        notificationDate: null,
-        expirationDate: null,
       });
 
       res.status(201).json(reservation);
@@ -1121,9 +1126,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: request.userId,
         bookId: request.bookId,
         dueDate,
-        status: "active",
-        returnDate: null,
-        renewalCount: 0,
       });
 
       await storage.updateBook(request.bookId, {
@@ -1538,6 +1540,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // AI Assistant Chat Route (Groq)
+  app.post("/api/chat", async (req, res) => {
+    try {
+      const { messages } = req.body;
+
+      const response = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: `Você é o "Mentor Digital da Biblioteca ISPTEC", um assistente virtual super amigável, prestativo e conhecedor de tudo sobre livros, literatura e o funcionamento desta biblioteca universitária.
+            
+            Seu objetivo é:
+            1. Ajudar os alunos e professores a encontrar livros e autores.
+            2. Explicar as regras da biblioteca (empréstimos por 5 dias para alunos, 15 para professores, etiquetas coloridas indicam prazos, multas de 500 Kz/dia).
+            3. Ser extremamente cortês e incentivar a leitura.
+            4. Se não souber algo específico do acervo real do ISPTEC (visto que não tem acesso em tempo real à base em SQL agora), peça para o usuário usar a barra de pesquisa ou contactar um bibliotecário.
+            
+            Fale sempre de forma calorosa e profissional.`
+          },
+          ...messages
+        ],
+        temperature: 0.7,
+      });
+
+      res.json({ message: response.choices[0].message.content });
+    } catch (error: any) {
+      console.error("Groq AI Error:", error);
+      res.status(500).json({ message: "O assistente está descansando agora. Tente novamente mais tarde." });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
