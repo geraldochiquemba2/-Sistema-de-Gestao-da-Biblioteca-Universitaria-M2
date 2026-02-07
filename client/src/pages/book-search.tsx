@@ -10,6 +10,8 @@ import { Search, BookOpen, LogOut, Calendar, MapPin, ArrowLeft } from "lucide-re
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
 
 export default function BookSearch() {
   const { user, logout } = useAuth();
@@ -40,6 +42,11 @@ export default function BookSearch() {
 
   const { data: userLoanRequests, refetch: refetchRequests } = useQuery({
     queryKey: ["/api/loan-requests", { userId: user?.id }],
+    enabled: !!user?.id,
+  });
+
+  const { data: activeLoans } = useQuery({
+    queryKey: ["/api/loans/user", user?.id],
     enabled: !!user?.id,
   });
 
@@ -124,6 +131,7 @@ export default function BookSearch() {
   const categoriesArray = Array.isArray(categories) ? categories : [];
   const reservationsArray = Array.isArray(userReservations) ? userReservations : [];
   const requestsArray = Array.isArray(userLoanRequests) ? userLoanRequests : [];
+  const activeLoansArray = Array.isArray(activeLoans) ? activeLoans : [];
 
   const hasActiveReservation = (bookId: string) => {
     return reservationsArray.some(
@@ -135,6 +143,14 @@ export default function BookSearch() {
     return requestsArray.some(
       (r: any) => r.bookId === bookId && r.status === "pending"
     );
+  };
+
+  const hasActiveLoan = (bookId: string) => {
+    return activeLoansArray.some((l: any) => l.bookId === bookId && l.status === "active");
+  };
+
+  const getActiveLoan = (bookId: string) => {
+    return activeLoansArray.find((l: any) => l.bookId === bookId && l.status === "active");
   };
 
   const getDepartmentLabel = (dept: string) => {
@@ -291,21 +307,26 @@ export default function BookSearch() {
                     ) : (
                       <Button
                         className="w-full"
-                        variant={hasPendingRequest(book.id) ? "outline" : "default"}
+                        variant={hasPendingRequest(book.id) ? "outline" : hasActiveLoan(book.id) ? "ghost" : "default"}
                         onClick={() => {
                           if (hasPendingRequest(book.id)) {
                             cancelRequestMutation.mutate(book.id);
-                          } else {
+                          } else if (!hasActiveLoan(book.id)) {
                             requestLoanMutation.mutate(book.id);
                           }
                         }}
-                        disabled={requestLoanMutation.isPending || cancelRequestMutation.isPending}
+                        disabled={requestLoanMutation.isPending || cancelRequestMutation.isPending || hasActiveLoan(book.id)}
                       >
                         {hasPendingRequest(book.id) ? (
                           <>
                             <LogOut className="h-4 w-4 mr-2 rotate-180" />
                             Cancelar Solicitação
                           </>
+                        ) : hasActiveLoan(book.id) ? (
+                          <div className="flex flex-col items-center">
+                            <span className="font-bold text-green-600">Já reservaste (Empréstimo Ativo)</span>
+                            <span className="text-xs text-muted-foreground">Devolver até {format(new Date(getActiveLoan(book.id).dueDate), "dd/MM/yyyy", { locale: pt })}</span>
+                          </div>
                         ) : (
                           <>
                             <BookOpen className="h-4 w-4 mr-2" />

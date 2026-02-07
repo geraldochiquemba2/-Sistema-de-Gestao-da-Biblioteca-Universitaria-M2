@@ -959,6 +959,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (userId && typeof userId === "string") {
         requests = await storage.getLoanRequestsByUser(userId);
+        // Apply status filter if provided
+        if (status && typeof status === "string") {
+          requests = requests.filter(r => r.status === status);
+        }
       } else if (status && typeof status === "string") {
         requests = await storage.getLoanRequestsByStatus(status);
       } else {

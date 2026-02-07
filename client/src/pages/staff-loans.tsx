@@ -144,13 +144,13 @@ export default function StaffLoans() {
               <Skeleton key={i} className="h-40 w-full" />
             ))}
           </div>
-        ) : activeLoans.length === 0 ? (
+        ) : activeLoans.length === 0 && pendingRequests.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2" data-testid="text-no-loans">Nenhum empréstimo ativo</h3>
+              <h3 className="text-lg font-semibold mb-2" data-testid="text-no-loans">Nenhum empréstimo ou solicitação</h3>
               <p className="text-muted-foreground text-center mb-6">
-                Você não tem nenhum livro emprestado no momento.
+                Você não tem nenhum livro emprestado ou solicitado no momento.
               </p>
               <Button onClick={() => setLocation("/staff/books")} data-testid="button-search-books">
                 Buscar Livros

@@ -19,6 +19,11 @@ export default function TeacherDashboard() {
     enabled: !!user?.id,
   });
 
+  const { data: loanRequests } = useQuery({
+    queryKey: ["/api/loan-requests", { userId: user?.id, status: "pending" }],
+    enabled: !!user?.id,
+  });
+
   if (!user) {
     return null;
   }
@@ -62,13 +67,15 @@ export default function TeacherDashboard() {
                 data-testid="card-active-loans"
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Empréstimos Ativos</CardTitle>
+                  <CardTitle className="text-sm font-medium">Empréstimos e Solicitações</CardTitle>
                   <BookOpen className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-active-loans">{activeLoans.length}/4</div>
+                  <div className="text-2xl font-bold" data-testid="text-active-loans">
+                    {activeLoans.length + (Array.isArray(loanRequests) ? loanRequests.length : 0)}/4
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Limite de 4 livros por docente
+                    {activeLoans.length} ativos, {Array.isArray(loanRequests) ? loanRequests.length : 0} pendentes
                   </p>
                 </CardContent>
               </Card>
