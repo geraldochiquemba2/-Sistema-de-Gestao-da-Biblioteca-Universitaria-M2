@@ -109,23 +109,57 @@ async function canUserLoan(userId: string, bookId: string): Promise<{ canLoan: b
   }
 
   if (book.availableCopies <= 0) {
-    return { canLoan: false, reason: "Livro indisponível" };
+    return { canLoan: false, reason: "Livro indisponível (zero cópias disponíveis)" };
   }
 
   if (book.tag === "red") {
     return { canLoan: false, reason: "Este livro é apenas para uso na biblioteca (etiqueta vermelha)" };
   }
 
+  // Check if user already has this book active
+  const userLoans = await storage.getLoansByUser(userId);
+  const activeLoans = userLoans.filter(l => l.status === "active");
+  const hasThisBookActive = activeLoans.some(l => l.bookId === bookId);
+  if (hasThisBookActive) {
+    return { canLoan: false, reason: "Você já tem este livro emprestado no momento" };
+  }
+
+  // Check for pending reservations (loan requests) for this book
+  const allPendingRequests = await storage.getLoanRequestsByStatus("pending");
+  const bookPendingRequests = allPendingRequests.filter(r => r.bookId === bookId);
+
+  // Check if current user already has a pending reservation for this book
+  const hasPendingReservation = bookPendingRequests.some(r => r.userId === userId);
+  if (hasPendingReservation) {
+    return { canLoan: false, reason: "Você já tem uma reserva pendente para este livro. Aprova a reserva em vez de criar um novo empréstimo." };
+  }
+
+  // Calculate effective availability: copies - reservations
+  // A loan is only allowed if effective copies > 0, unless the user IS one of the reservists (handled above by suggesting approval)
+  const effectiveCopies = book.availableCopies - bookPendingRequests.length;
+
+  if (effectiveCopies <= 0) {
+    // Determine who has the reservations to inform the admin
+    const reservists = await Promise.all(
+      bookPendingRequests.map(async (r) => {
+        const u = await storage.getUser(r.userId);
+        return u ? u.name : "Desconhecido";
+      })
+    );
+
+    return {
+      canLoan: false,
+      reason: `Este livro está reservado para: ${reservists.join(", ")}. Não há cópias livres além das reservadas.`
+    };
+  }
+
   // Check fines
   const totalFines = await getUserTotalFines(userId);
   if (totalFines >= MAX_FINE_FOR_LOAN) {
-    return { canLoan: false, reason: `Você tem multas pendentes de ${totalFines} Kz. Pague para liberar novos empréstimos.` };
+    return { canLoan: false, reason: `O utilizador tem multas pendentes de ${totalFines} Kz. Pague para liberar novos empréstimos.` };
   }
 
   // Check loan limits
-  const userLoans = await storage.getLoansByUser(userId);
-  const activeLoans = userLoans.filter(l => l.status === "active");
-
   const maxBooks = user.userType === "teacher"
     ? LOAN_RULES.teacher.maxBooks
     : user.userType === "staff"
@@ -133,13 +167,7 @@ async function canUserLoan(userId: string, bookId: string): Promise<{ canLoan: b
       : LOAN_RULES.student.maxBooks;
 
   if (activeLoans.length >= maxBooks) {
-    return { canLoan: false, reason: `Limite de ${maxBooks} livros atingido` };
-  }
-
-  // Check if user already has this book
-  const hasThisBook = activeLoans.some(l => l.bookId === bookId);
-  if (hasThisBook) {
-    return { canLoan: false, reason: "Você já tem este livro emprestado" };
+    return { canLoan: false, reason: `Limite de ${maxBooks} livros atingido para este tipo de utilizador` };
   }
 
   // For students and staff: check if they already have a book with the same title (unique titles only)
@@ -149,18 +177,18 @@ async function canUserLoan(userId: string, bookId: string): Promise<{ canLoan: b
     );
     const hasSameTitle = activeLoanBooks.some(b => b && b.title === book.title);
     if (hasSameTitle) {
-      return { canLoan: false, reason: "Você já tem um livro com este título emprestado. Estudantes e funcionários não podem ter títulos repetidos." };
+      return { canLoan: false, reason: "O utilizador já tem um livro com este título emprestado (limite de 1 cópia por título)." };
     }
   }
 
-  // For teachers: only 1 copy per title (they can have up to 4 books, but only 1 copy of each title)
+  // For teachers: only 1 copy per title
   if (user.userType === "teacher") {
     const activeLoanBooks = await Promise.all(
       activeLoans.map(loan => storage.getBook(loan.bookId))
     );
     const hasSameTitle = activeLoanBooks.some(b => b && b.title === book.title);
     if (hasSameTitle) {
-      return { canLoan: false, reason: "Você já tem uma obra deste título emprestada. Docentes podem ter apenas 1 obra por título." };
+      return { canLoan: false, reason: "O docente já tem uma obra deste título emprestada (docentes podem ter apenas 1 obra por título)." };
     }
   }
 
