@@ -18,6 +18,23 @@ export function startCronJobs() {
             console.error("❌ Error in daily cron job:", error);
         }
     });
+
+    // Keep-Alive Ping (Runs every 10 minutes)
+    // Only runs in production on Render
+    if (process.env.NODE_ENV === "production" && process.env.RENDER_EXTERNAL_URL) {
+        console.log("📡 Keep-Alive Service: Started. Schedule: Every 10 minutes");
+        cron.schedule("*/10 * * * *", async () => {
+            try {
+                const url = `${process.env.RENDER_EXTERNAL_URL}/api/health`;
+                const response = await fetch(url);
+                if (response.ok) {
+                    console.log(`📡 Keep-Alive: Pinged ${url} successfully.`);
+                }
+            } catch (error) {
+                console.error("📡 Keep-Alive: Failed to ping server:", error);
+            }
+        });
+    }
 }
 
 async function checkOverdueLoans() {

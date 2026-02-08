@@ -259,6 +259,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Debug Route
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   app.get("/api/debug/all-data", async (req, res) => {
     try {
       const allLoans = await storage.getAllLoans();
