@@ -19,6 +19,8 @@ import { useToast } from "@/hooks/use-toast";
 interface Fine {
   id: string;
   userId: string;
+  userName?: string;
+  userEmail?: string;
   loanId: string;
   amount: string;
   daysOverdue: number;
@@ -142,8 +144,9 @@ export default function Fines() {
               <Card key={fine.id} className="p-4 space-y-3" data-testid={`card-fine-${fine.id}`}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <div className="font-bold text-sm text-muted-foreground uppercase">Utilizador ID</div>
-                    <div className="font-medium truncate max-w-[150px]">{fine.userId}</div>
+                    <div className="font-bold text-sm text-muted-foreground uppercase">Utilizador</div>
+                    <div className="font-medium truncate max-w-[200px]">{fine.userName || fine.userId}</div>
+                    <div className="text-xs text-muted-foreground truncate max-w-[200px]">{fine.userEmail}</div>
                   </div>
                   <Badge className={statusConfig[fine.status].color}>
                     {statusConfig[fine.status].text}
@@ -185,7 +188,7 @@ export default function Fines() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Utilizador ID</TableHead>
+                <TableHead>Utilizador</TableHead>
                 <TableHead>Empréstimo ID</TableHead>
                 <TableHead>Dias de Atraso</TableHead>
                 <TableHead>Valor</TableHead>
@@ -210,7 +213,8 @@ export default function Fines() {
                 filteredFines.map((fine) => (
                   <TableRow key={fine.id} data-testid={`row-fine-${fine.id}`}>
                     <TableCell>
-                      <div className="font-medium" data-testid={`text-user-${fine.id}`}>{fine.userId}</div>
+                      <div className="font-medium" data-testid={`text-user-${fine.id}`}>{fine.userName || fine.userId}</div>
+                      <div className="text-xs text-muted-foreground">{fine.userEmail}</div>
                     </TableCell>
                     <TableCell data-testid={`text-loan-${fine.id}`}>{fine.loanId}</TableCell>
                     <TableCell>

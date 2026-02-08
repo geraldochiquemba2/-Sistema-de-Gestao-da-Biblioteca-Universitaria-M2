@@ -819,10 +819,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const virtualFines = await Promise.all(activeOverdueLoans.map(async (loan) => {
         const fineInfo = calculateFine(new Date(loan.dueDate), new Date());
+        const user = await storage.getUser(loan.userId);
         return {
           id: `virtual-${loan.id}`,
           loanId: loan.id,
           userId: loan.userId,
+          userName: user?.name || "Desconhecido",
+          userEmail: user?.email || "",
           amount: fineInfo.amount.toString(),
           daysOverdue: fineInfo.daysOverdue,
           status: "pending", // Virtual fines are always pending
@@ -832,8 +835,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }));
 
+      // Enrich persistent fines with user details
+      const enrichedPersistentFines = await Promise.all(persistentFines.map(async (fine) => {
+        const user = await storage.getUser(fine.userId);
+        return {
+          ...fine,
+          userName: user?.name || "Desconhecido",
+          userEmail: user?.email || ""
+        };
+      }));
+
       // Combine both
-      const allFines = [...persistentFines, ...virtualFines];
+      const allFines = [...enrichedPersistentFines, ...virtualFines];
       res.json(allFines);
     } catch (error) {
       console.error("Error in GET /api/fines:", error);
@@ -847,7 +860,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.params.userId;
       // Note: userId is a UUID string, do not parse as int
       const fines = await storage.getFinesByUser(userId);
-      res.json(fines);
+      const user = await storage.getUser(userId);
+
+      const enrichedFines = fines.map(f => ({
+        ...f,
+        userName: user?.name || "Desconhecido",
+        userEmail: user?.email || ""
+      }));
+
+      res.json(enrichedFines);
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar multas do usuário" });
     }

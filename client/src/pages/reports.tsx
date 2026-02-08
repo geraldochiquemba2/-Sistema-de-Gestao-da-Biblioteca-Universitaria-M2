@@ -68,6 +68,55 @@ export default function Reports() {
     { name: "Pendente", value: (stats?.totalFinesAmount || 0) - (stats?.paidFinesAmount || 0), color: "#ef4444" },
   ];
 
+  const handleExport = () => {
+    if (!stats || !categories || !activeUsers) return;
+
+    const csvRows = [];
+
+    // Header - General Stats
+    csvRows.push("RELATÓRIO DE DESEMPENHO - BIBLIOTECA DIGITAL ISPTEC");
+    csvRows.push(`Data do Relatório: ${new Date().toLocaleDateString()}`);
+    csvRows.push("");
+    csvRows.push("MÉTRICAS GERAIS");
+    csvRows.push(`Total de Livros (Títulos);${stats.totalBooks}`);
+    csvRows.push(`Total de Exemplares;${stats.totalCopies}`);
+    csvRows.push(`Exemplares Disponíveis;${stats.totalAvailableCopies}`);
+    csvRows.push(`Empréstimos Ativos;${stats.activeLoans}`);
+    csvRows.push(`Taxa de Utilização;${utilizationRate}%`);
+    csvRows.push("");
+    csvRows.push("FINANCEIRO");
+    csvRows.push(`Total de Multas Emitidas;${stats.totalFinesAmount} Kz`);
+    csvRows.push(`Total Recebido;${stats.paidFinesAmount} Kz`);
+    csvRows.push(`Total Pendente;${stats.totalFinesAmount - stats.paidFinesAmount} Kz`);
+    csvRows.push(`Utilizadores Bloqueados;${stats.blockedUsers}`);
+    csvRows.push("");
+
+    // Header - Categories
+    csvRows.push("POPULARIDADE POR CATEGORIA");
+    csvRows.push("Categoria;Quantidade de Empréstimos;Percentagem");
+    categories.forEach(cat => {
+      csvRows.push(`${cat.name};${cat.loans};${cat.percentage}%`);
+    });
+    csvRows.push("");
+
+    // Header - Users
+    csvRows.push("UTILIZADORES MAIS ATIVOS");
+    csvRows.push("Nome;Tipo;Total de Empréstimos");
+    activeUsers.slice(0, 5).forEach(u => {
+      csvRows.push(`${u.user.name};${u.user.userType};${u.loanCount}`);
+    });
+
+    const csvContent = "\uFEFF" + csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Relatorio_Biblioteca_ISPTEC_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="flex-1 space-y-6 p-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -77,7 +126,7 @@ export default function Reports() {
             Métricas de desempenho e estatísticas da biblioteca
           </p>
         </div>
-        <Button data-testid="button-export-report">
+        <Button onClick={handleExport} data-testid="button-export-report">
           <Download className="h-4 w-4 mr-2" />
           Exportar Relatório
         </Button>
