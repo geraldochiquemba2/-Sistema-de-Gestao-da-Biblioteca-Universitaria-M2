@@ -483,12 +483,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const book = await storage.getBook(loan.bookId);
         const fine = await storage.getFine(loan.id).catch(() => undefined); // Check if there's a fine linked to this loan
 
+        let fineAmount = fine ? parseFloat(fine.amount as any) : undefined;
+
+        // Dynamic calculation if no persistent fine exists and loan is active + overdue
+        if (!fineAmount && loan.status === "active" && new Date(loan.dueDate) < new Date()) {
+          const dynamicFine = calculateFine(new Date(loan.dueDate), new Date());
+          fineAmount = dynamicFine.amount;
+        }
+
         return {
           ...loan,
           userName: user?.name || "Desconhecido",
           userType: user?.userType || "student",
           bookTitle: book?.title || "Desconhecido",
-          fine: fine ? parseFloat(fine.amount as any) : undefined
+          fine: fineAmount
         };
       }));
 
@@ -509,10 +517,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const book = await storage.getBook(loan.bookId);
         const fine = await storage.getFine(loan.id).catch(() => undefined);
 
+        let fineAmount = fine ? parseFloat(fine.amount as any) : undefined;
+
+        // Dynamic calculation if no persistent fine exists and loan is active + overdue
+        if (!fineAmount && loan.status === "active" && new Date(loan.dueDate) < new Date()) {
+          const dynamicFine = calculateFine(new Date(loan.dueDate), new Date());
+          fineAmount = dynamicFine.amount;
+        }
+
         return {
           ...loan,
           book,
-          fine: fine ? parseFloat(fine.amount as any) : undefined
+          fine: fineAmount
         };
       }));
 
