@@ -28,6 +28,7 @@ import { UserDetailsDialog } from "@/components/UserDetailsDialog";
 // Helper type for the enriched user data
 type UserWithStats = User & {
   currentLoans: number;
+  totalLoansHistory: number;
   fines: number;
 };
 
@@ -146,7 +147,7 @@ export default function Users() {
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground uppercase font-semibold">Empréstimos</div>
-                    <div className="text-sm font-medium">{user.currentLoans} ativos</div>
+                    <div className="text-sm font-medium">{user.currentLoans} ativos / {user.totalLoansHistory} total</div>
                   </div>
                 </div>
 
@@ -183,7 +184,7 @@ export default function Users() {
               <TableRow>
                 <TableHead>Utilizador</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead>Empréstimos Atuais</TableHead>
+                <TableHead>Empréstimos (Ativos/Total)</TableHead>
                 <TableHead>Multas</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -224,7 +225,11 @@ export default function Users() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell data-testid={`text-loans-${user.id}`}>{user.currentLoans}</TableCell>
+                    <TableCell data-testid={`text-loans-${user.id}`}>
+                      <span className="font-medium text-primary">{user.currentLoans}</span>
+                      <span className="text-muted-foreground mx-1">/</span>
+                      <span className="text-muted-foreground text-xs">{user.totalLoansHistory} total</span>
+                    </TableCell>
                     <TableCell>
                       {Number(user.fines) > 0 ? (
                         <span className="text-destructive font-medium" data-testid={`text-fines-${user.id}`}>

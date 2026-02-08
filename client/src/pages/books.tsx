@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Search, BookOpen, Tag, Camera, Loader2, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, BookOpen, Tag, Camera, Loader2, Edit, Trash2, Star, History, DollarSign, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -43,9 +43,9 @@ const bookFormSchema = z.object({
 type BookFormValues = z.infer<typeof bookFormSchema>;
 
 const tagColors = {
-  red: { bg: "bg-red-100 dark:bg-red-900/30", text: "text-red-700 dark:text-red-300", label: "Uso na Biblioteca" },
-  yellow: { bg: "bg-yellow-100 dark:bg-yellow-900/30", text: "text-yellow-700 dark:text-yellow-300", label: "1 Dia" },
-  white: { bg: "bg-gray-100 dark:bg-gray-800", text: "text-gray-700 dark:text-gray-300", label: "5 Dias" },
+  red: { bg: "bg-red-50 dark:bg-red-900/10", border: "border-red-500", text: "text-red-700 dark:text-red-400", label: "Uso na Biblioteca" },
+  yellow: { bg: "bg-yellow-50 dark:bg-yellow-900/10", border: "border-yellow-500", text: "text-yellow-700 dark:text-yellow-400", label: "1 Dia" },
+  white: { bg: "bg-gray-50 dark:bg-gray-800/10", border: "border-gray-400", text: "text-gray-700 dark:text-gray-300", label: "5 Dias" },
 };
 
 export default function Books() {
@@ -646,12 +646,22 @@ export default function Books() {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-lg line-clamp-2">{book.title}</CardTitle>
-                  <Badge className={`${tagColors[book.tag as keyof typeof tagColors].bg} ${tagColors[book.tag as keyof typeof tagColors].text} flex-shrink-0`}>
-                    <Tag className="h-3 w-3 mr-1" />
+                  <Badge variant="outline" className={`${tagColors[book.tag as keyof typeof tagColors].bg} ${tagColors[book.tag as keyof typeof tagColors].text} ${tagColors[book.tag as keyof typeof tagColors].border} border-2 font-bold px-3 py-1 flex-shrink-0 animate-pulse-slow`}>
+                    <Tag className="h-3 w-3 mr-1.5" />
                     {tagColors[book.tag as keyof typeof tagColors].label}
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">{book.author}</p>
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm text-muted-foreground">{book.author}</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <div className="flex items-center">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} className={`h-3 w-3 ${s <= Math.round(book.averageRating || 0) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />
+                      ))}
+                    </div>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">{book.averageRating || "0.0"} ({book.reviewCount || 0} avaliações)</span>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-2">
                 {book.isbn && (
@@ -666,6 +676,21 @@ export default function Books() {
                     <span>{book.publisher}</span>
                   </div>
                 )}
+
+                <div className="grid grid-cols-2 gap-2 mt-4">
+                  <div className="flex flex-col p-2 bg-muted/40 rounded-lg border border-border/50">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase mb-1">
+                      <History className="h-3 w-3" /> Frequência
+                    </div>
+                    <div className="text-sm font-bold">{book.loanCount || 0} empréstimos</div>
+                  </div>
+                  <div className="flex flex-col p-2 bg-muted/40 rounded-lg border border-border/50">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase mb-1">
+                      <DollarSign className="h-3 w-3" /> Multas
+                    </div>
+                    <div className="text-sm font-bold text-destructive">{parseFloat(book.totalFines || "0").toLocaleString()} Kz</div>
+                  </div>
+                </div>
                 <div className="flex items-center justify-between pt-2 border-t">
                   <div className="flex items-center gap-2">
                     <BookOpen className="h-4 w-4 text-muted-foreground" />

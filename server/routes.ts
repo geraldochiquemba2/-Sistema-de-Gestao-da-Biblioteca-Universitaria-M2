@@ -258,6 +258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fines = await getUserTotalFines(u.id);
         const loans = await storage.getLoansByUser(u.id);
         const activeLoansCount = loans.filter(l => l.status === "active").length;
+        const totalLoansHistory = loans.length;
 
         return {
           id: u.id,
@@ -268,6 +269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isActive: u.isActive,
           createdAt: u.createdAt,
           currentLoans: activeLoansCount,
+          totalLoansHistory: totalLoansHistory,
           fines: fines
         };
       }));
@@ -374,7 +376,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         books = books.filter(book => book.categoryId === categoryId);
       }
 
-      res.json(books);
+      const enrichedBooks = await Promise.all(books.map(async (book) => {
+        const loans = await storage.getLoansByBook(book.id);
+        const reviews = await storage.getReviewsByBook(book.id);
+        const fines = await Promise.all(loans.map(async (l) => {
+          const f = await storage.getFine(l.id).catch(() => null);
+          return f ? parseFloat(f.amount as any) : 0;
+        }));
+
+        const totalFines = fines.reduce((sum, val) => sum + val, 0);
+        const avgRating = reviews.length > 0
+          ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+          : 0;
+
+        return {
+          ...book,
+          loanCount: loans.length,
+          totalFines: totalFines,
+          averageRating: Math.round(avgRating * 10) / 10,
+          reviewCount: reviews.length
+        };
+      }));
+
+      res.json(enrichedBooks);
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar livros" });
     }
