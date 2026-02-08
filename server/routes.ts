@@ -94,7 +94,19 @@ function calculateFine(dueDate: Date, returnDate: Date): { amount: number; daysO
 async function getUserTotalFines(userId: string): Promise<number> {
   const fines = await storage.getFinesByUser(userId);
   const pendingFines = fines.filter(f => f.status === "pending");
-  return pendingFines.reduce((sum, fine) => sum + parseFloat(fine.amount), 0);
+  const persistentTotal = pendingFines.reduce((sum, fine) => sum + parseFloat(fine.amount), 0);
+
+  // Add dynamic fines from active overdue loans
+  const userLoans = await storage.getLoansByUser(userId);
+  const activeOverdueLoans = userLoans.filter(l => l.status === "active" && new Date(l.dueDate) < new Date());
+
+  let dynamicTotal = 0;
+  for (const loan of activeOverdueLoans) {
+    const fineInfo = calculateFine(new Date(loan.dueDate), new Date());
+    dynamicTotal += fineInfo.amount;
+  }
+
+  return persistentTotal + dynamicTotal;
 }
 
 async function canUserLoan(userId: string, bookId: string): Promise<{ canLoan: boolean; reason?: string }> {
@@ -772,16 +784,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/fines", async (req, res) => {
     try {
       const { userId } = req.query;
-      let fines;
+      let persistentFines;
 
       if (userId && typeof userId === "string") {
-        fines = await storage.getFinesByUser(userId);
+        persistentFines = await storage.getFinesByUser(userId);
       } else {
-        fines = await storage.getAllFines();
+        persistentFines = await storage.getAllFines();
       }
 
-      res.json(fines);
+      // Calculate dynamic fines for active overdue loans
+      let activeOverdueLoans;
+      if (userId && typeof userId === "string") {
+        const userLoans = await storage.getLoansByUser(userId);
+        activeOverdueLoans = userLoans.filter(l => l.status === "active" && new Date(l.dueDate) < new Date());
+      } else {
+        activeOverdueLoans = await storage.getOverdueLoans();
+      }
+
+      const virtualFines = await Promise.all(activeOverdueLoans.map(async (loan) => {
+        const fineInfo = calculateFine(new Date(loan.dueDate), new Date());
+        return {
+          id: `virtual-${loan.id}`,
+          loanId: loan.id,
+          userId: loan.userId,
+          amount: fineInfo.amount.toString(),
+          daysOverdue: fineInfo.daysOverdue,
+          status: "pending", // Virtual fines are always pending
+          paymentDate: null,
+          createdAt: loan.createdAt,
+          isVirtual: true // Flag to identify these are not in DB yet
+        };
+      }));
+
+      // Combine both
+      const allFines = [...persistentFines, ...virtualFines];
+      res.json(allFines);
     } catch (error) {
+      console.error("Error in GET /api/fines:", error);
       res.status(500).json({ message: "Erro ao buscar multas" });
     }
   });
