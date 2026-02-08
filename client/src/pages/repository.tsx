@@ -50,7 +50,7 @@ export default function Repository() {
     };
 
     return (
-        <div className="flex-1 space-y-6 p-6">
+        <div className="flex-1 space-y-6 p-6 pb-24 md:pb-6">
             <div className="flex flex-col gap-2">
                 <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
                     <Library className="h-8 w-8 text-primary" />
@@ -101,9 +101,9 @@ export default function Repository() {
 
             {/* Search Bar */}
             <Card className="p-4 bg-muted/50">
-                <form onSubmit={handleSearch} className="flex gap-2">
+                <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-2">
                     <Select value={source} onValueChange={setSource}>
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-full md:w-[180px]">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -116,22 +116,22 @@ export default function Repository() {
                         </SelectContent>
                     </Select>
                     <Input
-                        placeholder="Pesquisar por tema, autor ou título (ex: Direito, Machado de Assis)..."
+                        placeholder="Pesquisar por tema, autor ou título..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="flex-1"
+                        className="flex-1 w-full"
                     />
                     {source === "welib" ? (
                         <Button
                             type="button"
-                            className="bg-[#0056b3] hover:bg-[#004494]"
+                            className="w-full md:w-auto bg-[#0056b3] hover:bg-[#004494]"
                             onClick={() => window.open(`https://welib.org/search?q=${encodeURIComponent(searchQuery)}`, "_blank")}
                         >
                             <ExternalLink className="h-4 w-4 mr-2" />
                             Buscar na welib.org
                         </Button>
                     ) : (
-                        <Button type="submit" disabled={isLoading}>
+                        <Button type="submit" disabled={isLoading} className="w-full md:w-auto">
                             {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
                             Pesquisar
                         </Button>

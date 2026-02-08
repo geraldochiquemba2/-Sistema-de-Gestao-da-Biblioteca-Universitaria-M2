@@ -205,7 +205,7 @@ export default function BookSearch() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 pb-24 md:pb-8">
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Filtros de Busca</CardTitle>
@@ -213,7 +213,7 @@ export default function BookSearch() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
+              <div className="flex-1 w-full">
                 <Input
                   placeholder="Pesquisar livros..."
                   value={searchTerm}
