@@ -42,6 +42,52 @@ const bookFormSchema = z.object({
 
 type BookFormValues = z.infer<typeof bookFormSchema>;
 
+interface BookReviewsDialogProps {
+  bookId: string | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  bookTitle?: string;
+}
+
+function BookReviewsDialog({ bookId, open, onOpenChange, bookTitle }: BookReviewsDialogProps) {
+  const { data: reviews, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/reviews/book", bookId],
+    enabled: !!bookId && open,
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Avaliações: {bookTitle}</DialogTitle>
+          <DialogDescription>O que os utilizadores dizem sobre este livro.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 mt-4">
+          {isLoading ? (
+            <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
+          ) : !reviews || reviews.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">Este livro ainda não foi avaliado.</div>
+          ) : (
+            reviews.map((review) => (
+              <div key={review.id} className="p-3 bg-muted/30 rounded-lg border">
+                <div className="flex justify-between items-start mb-1">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} className={`h-3 w-3 ${s <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{new Date(review.createdAt).toLocaleDateString()}</span>
+                </div>
+                <p className="text-sm italic text-foreground/80">"{review.comment}"</p>
+              </div>
+            ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 const tagColors = {
   red: { bg: "bg-red-50 dark:bg-red-900/10", border: "border-red-500", text: "text-red-700 dark:text-red-400", label: "Uso na Biblioteca" },
   yellow: { bg: "bg-yellow-50 dark:bg-yellow-900/10", border: "border-yellow-500", text: "text-yellow-700 dark:text-yellow-400", label: "1 Dia" },
@@ -56,6 +102,7 @@ export default function Books() {
   const [isSearchingWeb, setIsSearchingWeb] = useState(false);
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
+  const [viewingReviewsBook, setViewingReviewsBook] = useState<any | null>(null);
   const { toast } = useToast();
 
   const handleWebSearch = async () => {
@@ -653,7 +700,10 @@ export default function Books() {
                 </div>
                 <div className="flex flex-col gap-1">
                   <p className="text-sm text-muted-foreground">{book.author}</p>
-                  <div className="flex items-center gap-1.5 mt-1">
+                  <div
+                    className="flex items-center gap-1.5 mt-1 cursor-pointer hover:underline decoration-yellow-400"
+                    onClick={() => setViewingReviewsBook(book)}
+                  >
                     <div className="flex items-center">
                       {[1, 2, 3, 4, 5].map((s) => (
                         <Star key={s} className={`h-3 w-3 ${s <= Math.round(book.averageRating || 0) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"}`} />
@@ -758,6 +808,12 @@ export default function Books() {
           </CardContent>
         </Card>
       )}
+      <BookReviewsDialog
+        bookId={viewingReviewsBook?.id || null}
+        bookTitle={viewingReviewsBook?.title}
+        open={!!viewingReviewsBook}
+        onOpenChange={(open) => !open && setViewingReviewsBook(null)}
+      />
     </div>
   );
 }
