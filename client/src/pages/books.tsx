@@ -112,6 +112,7 @@ export default function Books() {
     if (!magicQuery && !image) return;
 
     setIsMagicLoading(true);
+    setSearchResults(null); // Clear previous searches
     try {
       const res = await apiRequest("POST", "/api/books/magic-fill", {
         query: magicQuery,
@@ -120,26 +121,22 @@ export default function Books() {
       });
       const data = await res.json();
 
-      // Population logic
-      form.setValue("title", data.title || "");
-      form.setValue("author", data.author || "");
-      form.setValue("isbn", data.isbn || "");
-      form.setValue("publisher", data.publisher || "");
-      if (data.yearPublished) {
-        form.setValue("yearPublished", parseInt(data.yearPublished.toString()));
+      if (Array.isArray(data)) {
+        // Text search returned multiple options
+        setSearchResults(data);
+        toast({
+          title: "Resultados encontrados! 🔍",
+          description: "Selecione a edição correta abaixo para preencher os dados.",
+        });
+      } else {
+        // Image search or direct result
+        populateBookForm(data);
+        setMagicQuery("");
+        toast({
+          title: "Pirlimpimpim! ✨",
+          description: "Os dados foram preenchidos e a categoria sugerida automaticamente.",
+        });
       }
-      if (data.description) {
-        form.setValue("description", data.description);
-      }
-      if (data.categoryId) {
-        form.setValue("categoryId", data.categoryId);
-      }
-
-      setMagicQuery("");
-      toast({
-        title: "Pirlimpimpim! ✨",
-        description: "Os dados foram preenchidos e a categoria sugerida automaticamente.",
-      });
     } catch (error: any) {
       toast({
         title: "A magia falhou",
@@ -148,6 +145,49 @@ export default function Books() {
       });
     } finally {
       setIsMagicLoading(false);
+    }
+  };
+
+  const selectSearchResult = async (book: any) => {
+    populateBookForm(book);
+    setSearchResults(null);
+    setMagicQuery("");
+
+    // Auto-suggest category for the selected book
+    setIsMagicLoading(true);
+    try {
+      const res = await apiRequest("POST", "/api/books/suggest-category", {
+        book,
+        categories
+      });
+      const { categoryId } = await res.json();
+      if (categoryId) {
+        form.setValue("categoryId", categoryId);
+        toast({
+          title: "Categoria Sugerida! ✨",
+          description: "A IA classificou o livro automaticamente.",
+        });
+      }
+    } catch (error) {
+      console.error("Category suggestion error:", error);
+    } finally {
+      setIsMagicLoading(false);
+    }
+  };
+
+  const populateBookForm = (data: any) => {
+    form.setValue("title", data.title || "");
+    form.setValue("author", data.author || "");
+    form.setValue("isbn", data.isbn || "");
+    form.setValue("publisher", data.publisher || "");
+    if (data.yearPublished) {
+      form.setValue("yearPublished", parseInt(data.yearPublished.toString()));
+    }
+    if (data.description) {
+      form.setValue("description", data.description);
+    }
+    if (data.categoryId) {
+      form.setValue("categoryId", data.categoryId);
     }
   };
 

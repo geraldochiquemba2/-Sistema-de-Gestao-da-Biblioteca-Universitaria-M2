@@ -1133,9 +1133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "É necessário uma imagem ou uma descrição do livro." });
       }
 
-      let bookContext = "";
-
-      // 1. Process Image with Groq Vision if provided
+      // 1. Process Image with Groq Vision (Returns direct metadata)
       if (image) {
         const visionResponse = await groq.chat.completions.create({
           model: "meta-llama/llama-4-scout-17b-16e-instruct",
@@ -1143,66 +1141,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
             {
               role: "user",
               content: [
-                { type: "text", text: "Identifique este livro. Retorne apenas Título e Autor." },
+                { type: "text", text: "Analise esta capa e retorne JSON: title, author, isbn, publisher, yearPublished, description." },
                 { type: "image_url", image_url: { url: `data:image/jpeg;base64,${image}` } }
               ],
             },
           ],
+          response_format: { type: "json_object" }
         });
-        bookContext = visionResponse.choices[0].message.content || "";
-      } else {
-        bookContext = query;
-      }
+        const result = JSON.parse(visionResponse.choices[0].message.content || "{}");
 
-      // 2. Search Web (Tavily) for precise metadata
-      let webData = "";
-      if (process.env.TAVILY_API_KEY) {
-        try {
-          const tvRes = await fetch("https://api.tavily.com/search", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              api_key: process.env.TAVILY_API_KEY,
-              query: `detalhes do livro ${bookContext} isbn editora ano descrição`,
-              search_depth: "advanced",
-              max_results: 2
-            })
+        // Auto-match category even for image
+        if (currentCategories.length > 0) {
+          const catMatching = await groq.chat.completions.create({
+            model: "llama-3.3-70b-versatile",
+            messages: [{
+              role: "system",
+              content: `Selecione o ID da categoria que melhor se adapta a este livro. Categorias: ${currentCategories.map((c: any) => `"${c.name}" (ID: ${c.id})`).join(", ")}. Retorne apenas o ID.`
+            }, {
+              role: "user",
+              content: `Livro: ${result.title} - ${result.author} (${result.description})`
+            }]
           });
-          const tvData = await tvRes.json();
-          webData = tvData.results?.map((r: any) => r.content).join("\n") || "";
-        } catch (err) {
-          console.error("Tavily Magic Fill Error:", err);
+          result.categoryId = catMatching.choices[0].message.content?.trim();
         }
+
+        return res.json(result);
       }
 
-      // 3. Use AI to consolidate everything and match category
-      const consolidationResponse = await groq.chat.completions.create({
+      // 2. Process Text (Returns LIST of candidates for selection)
+      const googleBooksRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=5`);
+      const googleData = await googleBooksRes.json();
+
+      const candidates = (googleData.items || []).map((item: any) => {
+        const info = item.volumeInfo;
+        const isbn = info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || info.industryIdentifiers?.[0]?.identifier;
+        return {
+          title: info.title,
+          author: info.authors?.join(", "),
+          isbn: isbn,
+          publisher: info.publisher,
+          yearPublished: info.publishedDate ? parseInt(info.publishedDate.split("-")[0]) : null,
+          description: info.description,
+          thumbnail: info.imageLinks?.thumbnail
+        };
+      });
+
+      if (candidates.length === 0) {
+        return res.status(404).json({ message: "Não encontramos candidatos para este livro." });
+      }
+
+      res.json(candidates);
+    } catch (error: any) {
+      console.error("Magic Fill Error:", error);
+      res.status(500).json({ message: "A varinha mágica falhou: " + error.message });
+    }
+  });
+
+  app.post("/api/books/suggest-category", async (req, res) => {
+    try {
+      const { book, categories = [] } = req.body;
+      if (!book || categories.length === 0) {
+        return res.status(400).json({ message: "Dados insuficientes para sugestão." });
+      }
+
+      const response = await groq.chat.completions.create({
         model: "llama-3.3-70b-versatile",
         messages: [
           {
             role: "system",
-            content: `Você é um bibliotecário robô ultra-inteligente. Sua tarefa é extrair e organizar informações de livros.
-            Categorias disponíveis no nosso sistema: ${currentCategories.map((c: any) => `"${c.name}" (ID: ${c.id})`).join(", ")}.
-            
-            Regras:
-            1. Retorne APENAS um objeto JSON.
-            2. Se não encontrar o ano, use o atual.
-            3. Escolha obrigatoriamente uma das categorias acima que melhor se adapte.
-            4. Campos: title, author, isbn, publisher, yearPublished, description, categoryId.`
+            content: `Você é um bibliotecário especialista. Retorne APENAS o ID da categoria que melhor se adapta ao livro. 
+            Opções: ${categories.map((c: any) => `"${c.name}" (ID: ${c.id})`).join(", ")}.`
           },
           {
             role: "user",
-            content: `Combine estas informações e formate o JSON:\nContexto Inicial: ${bookContext}\nDados da Web: ${webData}`
+            content: `Livro: ${book.title} - ${book.author}. Descrição: ${book.description}`
           }
         ],
-        response_format: { type: "json_object" }
+        temperature: 0.1
       });
 
-      const result = JSON.parse(consolidationResponse.choices[0].message.content || "{}");
-      res.json(result);
+      const categoryId = response.choices[0].message.content?.trim();
+      res.json({ categoryId });
     } catch (error: any) {
-      console.error("Magic Fill Error:", error);
-      res.status(500).json({ message: "A varinha mágica falhou: " + error.message });
+      res.status(500).json({ message: "Erro ao sugerir categoria: " + error.message });
     }
   });
 
