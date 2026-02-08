@@ -1126,6 +1126,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/books/magic-fill", async (req, res) => {
+    try {
+      const { image, query, currentCategories = [] } = req.body;
+      if (!image && !query) {
+        return res.status(400).json({ message: "É necessário uma imagem ou uma descrição do livro." });
+      }
+
+      let bookContext = "";
+
+      // 1. Process Image with Groq Vision if provided
+      if (image) {
+        const visionResponse = await groq.chat.completions.create({
+          model: "llama-3.2-11b-vision-preview",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "Identifique este livro. Retorne apenas Título e Autor." },
+                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${image}` } }
+              ],
+            },
+          ],
+        });
+        bookContext = visionResponse.choices[0].message.content || "";
+      } else {
+        bookContext = query;
+      }
+
+      // 2. Search Web (Tavily) for precise metadata
+      let webData = "";
+      if (process.env.TAVILY_API_KEY) {
+        try {
+          const tvRes = await fetch("https://api.tavily.com/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              api_key: process.env.TAVILY_API_KEY,
+              query: `detalhes do livro ${bookContext} isbn editora ano descrição`,
+              search_depth: "advanced",
+              max_results: 2
+            })
+          });
+          const tvData = await tvRes.json();
+          webData = tvData.results?.map((r: any) => r.content).join("\n") || "";
+        } catch (err) {
+          console.error("Tavily Magic Fill Error:", err);
+        }
+      }
+
+      // 3. Use AI to consolidate everything and match category
+      const consolidationResponse = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: `Você é um bibliotecário robô ultra-inteligente. Sua tarefa é extrair e organizar informações de livros.
+            Categorias disponíveis no nosso sistema: ${currentCategories.map((c: any) => `"${c.name}" (ID: ${c.id})`).join(", ")}.
+            
+            Regras:
+            1. Retorne APENAS um objeto JSON.
+            2. Se não encontrar o ano, use o atual.
+            3. Escolha obrigatoriamente uma das categorias acima que melhor se adapte.
+            4. Campos: title, author, isbn, publisher, yearPublished, description, categoryId.`
+          },
+          {
+            role: "user",
+            content: `Combine estas informações e formate o JSON:\nContexto Inicial: ${bookContext}\nDados da Web: ${webData}`
+          }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      const result = JSON.parse(consolidationResponse.choices[0].message.content || "{}");
+      res.json(result);
+    } catch (error: any) {
+      console.error("Magic Fill Error:", error);
+      res.status(500).json({ message: "A varinha mágica falhou: " + error.message });
+    }
+  });
+
   // Reports
   app.get("/api/reports/popular-books", async (req, res) => {
     try {
@@ -1877,17 +1957,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add conversation history
       messages.forEach((m: any, idx: number) => {
-        if (idx === messages.length - 1 && image) {
-          // Last message with image
+        const isLastMessage = idx === messages.length - 1;
+        const content = m.content || "[sem conteúdo]";
+
+        if (isLastMessage && image) {
+          // Current message with image
           groqMessages.push({
             role: m.role,
             content: [
-              { type: "text", text: m.content },
+              { type: "text", text: content },
               { type: "image_url", image_url: { url: image } }
             ]
           });
         } else {
-          groqMessages.push({ role: m.role, content: m.content });
+          // Regular text message
+          groqMessages.push({ role: m.role, content: content });
         }
       });
 
@@ -1900,8 +1984,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: response.choices[0].message.content });
     } catch (error: any) {
-      console.error("Groq AI Error:", error);
-      res.status(500).json({ message: "O assistente está descansando agora. Tente novamente mais tarde." });
+      console.error("Groq AI Error Detail:", error.response?.data || error.message);
+      res.status(500).json({
+        message: "O assistente teve um soluço técnico ao analisar os dados. Pode tentar enviar novamente?",
+        debug: error.message
+      });
     }
   });
 

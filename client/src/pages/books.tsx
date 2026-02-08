@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Search, BookOpen, Tag, Camera, Loader2, Edit, Trash2, Star, History, DollarSign, MessageSquare } from "lucide-react";
+import { Plus, Search, BookOpen, Tag, Camera, Loader2, Edit, Trash2, Star, History, DollarSign, MessageSquare, Wand2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -104,151 +104,88 @@ export default function Books() {
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
   const [viewingReviewsBook, setViewingReviewsBook] = useState<any | null>(null);
+  const [magicQuery, setMagicQuery] = useState("");
+  const [isMagicLoading, setIsMagicLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleWebSearch = async () => {
-    const title = form.getValues("title");
-    if (!title) {
-      toast({
-        title: "Título necessário",
-        description: "Digite o título do livro para pesquisar na internet.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleMagicFill = async (image?: string) => {
+    if (!magicQuery && !image) return;
 
-    setIsSearchingWeb(true);
-    setSearchResults(null);
+    setIsMagicLoading(true);
     try {
-      const res = await apiRequest("POST", "/api/books/web-search", { title });
+      const res = await apiRequest("POST", "/api/books/magic-fill", {
+        query: magicQuery,
+        image,
+        currentCategories: categories
+      });
       const data = await res.json();
 
-      if (Array.isArray(data) && data.length > 0) {
-        setSearchResults(data);
-        toast({
-          title: "Resultados encontrados",
-          description: `Encontramos ${data.length} resultados. Selecione um abaixo.`,
-        });
-      } else {
-        toast({
-          title: "Nenhum resultado",
-          description: "Não foram encontrados livros com este título.",
-          variant: "destructive",
-        });
+      // Population logic
+      form.setValue("title", data.title || "");
+      form.setValue("author", data.author || "");
+      form.setValue("isbn", data.isbn || "");
+      form.setValue("publisher", data.publisher || "");
+      if (data.yearPublished) {
+        form.setValue("yearPublished", parseInt(data.yearPublished.toString()));
       }
+      if (data.description) {
+        form.setValue("description", data.description);
+      }
+      if (data.categoryId) {
+        form.setValue("categoryId", data.categoryId);
+      }
+
+      setMagicQuery("");
+      toast({
+        title: "Pirlimpimpim! ✨",
+        description: "Os dados foram preenchidos e a categoria sugerida automaticamente.",
+      });
     } catch (error: any) {
       toast({
-        title: "Erro na pesquisa",
-        description: error.message || "Não foi possível encontrar informações para este livro.",
+        title: "A magia falhou",
+        description: error.message || "Tente novamente ou preencha manualmente.",
         variant: "destructive",
       });
     } finally {
-      setIsSearchingWeb(false);
+      setIsMagicLoading(false);
     }
   };
 
-  const selectSearchResult = (book: any) => {
-    form.setValue("title", book.title || "Não Identificado");
-    form.setValue("author", book.author || "Não Identificado");
-    form.setValue("isbn", book.isbn || ""); // Mantemos vazio para evitar erro de duplicado no DB
-    form.setValue("publisher", book.publisher || "Não Identificado");
-    if (book.yearPublished) {
-      form.setValue("yearPublished", parseInt(book.yearPublished.toString()));
-    }
-    form.setValue("description", book.description || "Não Identificado");
-
-    // Tentar mapear categoria
-    if (book.categories && categories) {
-      const apiCats = book.categories.toLowerCase().split(",").map((c: any) => c.trim());
-      const matchedCat = categories.find((c: any) =>
-        apiCats.some((ac: any) => ac.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(ac))
-      );
-      if (matchedCat) {
-        form.setValue("categoryId", matchedCat.id);
-      }
-    }
-
-    setSearchResults(null);
-    toast({
-      title: "Dados preenchidos!",
-      description: "As informações do livro selecionado foram inseridas.",
-    });
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMagicImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setIsScanning(true);
     const reader = new FileReader();
     reader.onloadend = async () => {
-      const base64 = (reader.result as string).split(",")[1];
-      try {
-        const res = await apiRequest("POST", "/api/books/ocr", { image: base64 });
-        const data = await res.json();
+      const img = new Image();
+      img.src = reader.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1024;
+        const MAX_HEIGHT = 1024;
+        let width = img.width;
+        let height = img.height;
 
-        form.setValue("title", data.title || "");
-        form.setValue("author", data.author || "");
-        form.setValue("isbn", data.isbn || "");
-        form.setValue("publisher", data.publisher || "");
-        if (data.yearPublished) {
-          form.setValue("yearPublished", parseInt(data.yearPublished.toString()));
-        }
-        if (data.description) {
-          form.setValue("description", data.description);
-        }
-
-        // Se encontrou um título, faz a busca na web para complementar dados
-        if (data.title) {
-          toast({
-            title: "Capa reconhecida!",
-            description: "Buscando informações complementares na internet...",
-          });
-
-          try {
-            const webRes = await apiRequest("POST", "/api/books/web-search", { title: data.title });
-            const webDataArray = await webRes.json();
-            const webData = Array.isArray(webDataArray) ? webDataArray[0] : null;
-
-            if (webData) {
-              if (!form.getValues("author") || form.getValues("author") === "Não Identificado")
-                form.setValue("author", webData.author || "Não Identificado");
-              if (!form.getValues("isbn")) form.setValue("isbn", webData.isbn || "");
-              if (!form.getValues("publisher") || form.getValues("publisher") === "Não Identificado")
-                form.setValue("publisher", webData.publisher || "Não Identificado");
-              if (!form.getValues("yearPublished") && webData.yearPublished) {
-                form.setValue("yearPublished", parseInt(webData.yearPublished.toString()));
-              }
-              if (!form.getValues("description") || form.getValues("description") === "Não Identificado")
-                form.setValue("description", webData.description || "Não Identificado");
-
-              // Mapear categoria se encontrada
-              if (webData.categories && categories && !form.getValues("categoryId")) {
-                const apiCats = webData.categories.toLowerCase().split(",").map((c: any) => c.trim());
-                const matchedCat = categories.find((c: any) =>
-                  apiCats.some((ac: any) => ac.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(ac))
-                );
-                if (matchedCat) form.setValue("categoryId", matchedCat.id);
-              }
-            }
-          } catch (webErr) {
-            console.error("Erro na busca complementar:", webErr);
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
           }
         }
 
-        toast({
-          title: "Dados processados!",
-          description: "As informações foram extraídas e complementadas via internet.",
-        });
-      } catch (error: any) {
-        toast({
-          title: "Erro no OCR",
-          description: error.message || "Não foi possível extrair os dados da imagem.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsScanning(false);
-      }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8).split(",")[1];
+        handleMagicFill(compressedBase64);
+      };
     };
     reader.readAsDataURL(file);
   };
@@ -391,53 +328,66 @@ export default function Books() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg mb-4 bg-muted/50">
-              {isScanning ? (
-                <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm font-medium">Analisando capa do livro...</p>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center w-full gap-4">
-                  <div className="flex flex-col items-center">
-                    <Camera className="h-8 w-8 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground mb-2 text-center">Capture ou envie uma foto da capa para extrair os dados</p>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="max-w-xs"
-                      data-testid="input-ocr-camera"
-                    />
+            <div className="p-4 rounded-xl border-2 border-dashed border-primary/20 bg-primary/5 mb-6 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Wand2 className="h-20 w-20 rotate-12" />
+              </div>
+
+              <div className="relative space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-primary/20 p-2 rounded-lg">
+                    <Sparkles className="h-5 w-5 text-primary animate-pulse" />
                   </div>
-                  <div className="w-full flex items-center gap-2">
-                    <div className="h-[1px] flex-1 bg-border" />
-                    <span className="text-xs text-muted-foreground uppercase">Ou</span>
-                    <div className="h-[1px] flex-1 bg-border" />
-                  </div>
-                  <div className="w-full flex flex-col gap-2">
-                    <Label htmlFor="web-title-search" className="text-xs">Ou digite o título para buscar na internet</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="web-title-search"
-                        placeholder="Ex: Dom Casmurro"
-                        value={form.watch("title")}
-                        onChange={(e) => form.setValue("title", e.target.value)}
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={handleWebSearch}
-                        disabled={isSearchingWeb}
-                        data-testid="button-web-search"
-                      >
-                        {isSearchingWeb ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                      </Button>
-                    </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-primary">Preenchimento Mágico (IA + Web)</h4>
+                    <p className="text-[11px] text-muted-foreground">Tire uma foto ou descreva o livro para preencher tudo automaticamente.</p>
                   </div>
                 </div>
-              )}
+
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ex: Dom Casmurro de Machado de Assis..."
+                    value={magicQuery}
+                    onChange={(e) => setMagicQuery(e.target.value)}
+                    className="bg-background border-primary/20 focus-visible:ring-primary"
+                    disabled={isMagicLoading}
+                  />
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => handleMagicFill()}
+                    disabled={isMagicLoading || !magicQuery.trim()}
+                    className="shadow-sm"
+                  >
+                    {isMagicLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Preencher"}
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="h-[1px] flex-1 bg-primary/10" />
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold px-2">Ou use a câmera</span>
+                  <div className="h-[1px] flex-1 bg-primary/10" />
+                </div>
+
+                <div className="flex justify-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full gap-2 border-primary/20 hover:bg-primary/10 text-primary"
+                    onClick={() => document.getElementById('magic-image-input')?.click()}
+                    disabled={isMagicLoading}
+                  >
+                    {isMagicLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Camera className="h-4 w-4" /> Capturar Foto da Capa</>}
+                  </Button>
+                  <input
+                    id="magic-image-input"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleMagicImageUpload}
+                  />
+                </div>
+              </div>
             </div>
 
             {searchResults && searchResults.length > 0 && (
