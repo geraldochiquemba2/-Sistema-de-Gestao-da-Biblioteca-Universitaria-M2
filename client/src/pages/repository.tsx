@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Download, BookOpen, ExternalLink, Loader2, Library } from "lucide-react";
+import { Search, Download, BookOpen, ExternalLink, Loader2, Library, Star, Globe } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -59,6 +59,44 @@ export default function Repository() {
                 <p className="text-muted-foreground">
                     Pesquise e baixe obras de domínio público de múltiplas fontes: Google Books, Open Library e Project Gutenberg.
                 </p>
+            </div>
+
+            {/* Featured External Source: welib.org */}
+            <div className="grid gap-6 md:grid-cols-1">
+                <Card className="overflow-hidden border-primary/20 shadow-md bg-gradient-to-r from-primary/5 to-transparent">
+                    <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                            <Badge className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 px-3 py-1">
+                                <Star className="h-3 w-3 fill-current" />
+                                Recomendado pelo ISPTEC
+                            </Badge>
+                            <Globe className="h-5 w-5 text-muted-foreground/50" />
+                        </div>
+                        <div className="mt-4 flex items-center gap-4">
+                            <div className="h-16 w-16 bg-white rounded-lg border shadow-sm flex items-center justify-center p-2">
+                                <img src="https://welib.org/favicon.ico" alt="welib.org" className="h-10 w-10 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = '<Library class="h-8 w-8 text-primary" />'; }} />
+                            </div>
+                            <div>
+                                <CardTitle className="text-2xl font-bold">welib.org</CardTitle>
+                                <p className="text-sm text-muted-foreground font-medium">Biblioteca Digital Universal e Gratuita</p>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                        <p className="text-sm text-foreground/80 leading-relaxed max-w-2xl">
+                            A **welib.org** é uma das maiores plataformas de acesso a livros digitais gratuitos do mundo.
+                            Ideal para encontrar bibliografia académica, clássicos da literatura e manuais técnicos em diversos idiomas.
+                        </p>
+                    </CardContent>
+                    <CardFooter className="bg-muted/30 border-t py-4">
+                        <Button asChild size="lg" className="w-full md:w-auto font-bold shadow-sm transition-all hover:scale-[1.02]">
+                            <a href="https://welib.org" target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-5 w-5 mr-2" />
+                                Aceder à welib.org Agora
+                            </a>
+                        </Button>
+                    </CardFooter>
+                </Card>
             </div>
 
             {/* Search Bar */}
