@@ -101,7 +101,7 @@ export default function Repository() {
 
             {/* Search Bar */}
             <Card className="p-4 bg-muted/50">
-                <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-2">
+                <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-[180px_1fr] md:flex md:flex-row gap-2">
                     <Select value={source} onValueChange={setSource}>
                         <SelectTrigger className="w-full md:w-[180px]">
                             <SelectValue />
@@ -119,7 +119,7 @@ export default function Repository() {
                         placeholder="Pesquisar por tema, autor ou título..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="flex-1 w-full"
+                        className="w-full flex-1"
                     />
                     {source === "welib" ? (
                         <Button

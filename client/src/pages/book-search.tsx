@@ -212,8 +212,8 @@ export default function BookSearch() {
             <CardDescription>Pesquise por título, autor ou ISBN</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-row gap-4">
+              <div className="flex-1 w-full sm:col-span-2 md:col-span-1">
                 <Input
                   placeholder="Pesquisar livros..."
                   value={searchTerm}
