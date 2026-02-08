@@ -108,9 +108,9 @@ export default function StaffLoans() {
   };
 
   const tagInfo = {
-    red: { label: "Uso na Biblioteca", color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300" },
-    yellow: { label: "1 Dia", color: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300" },
-    white: { label: "5 Dias", color: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300" },
+    red: { label: "Etiqueta Vermelha (Uso Local)", color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300" },
+    yellow: { label: "Etiqueta Amarela (1 Dia)", color: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300" },
+    white: { label: "Etiqueta Branca (5 Dias)", color: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300" },
   };
 
   const getDaysUntilDue = (dueDate: string) => {
@@ -187,7 +187,14 @@ export default function StaffLoans() {
                 if (!book) return null;
 
                 return (
-                  <Card key={loan.id} data-testid={`card-loan-${loan.id}`}>
+                  <Card
+                    key={loan.id}
+                    data-testid={`card-loan-${loan.id}`}
+                    className={`border-2 ${book.tag === 'red' ? 'border-red-500 shadow-red-100/50' :
+                      book.tag === 'yellow' ? 'border-yellow-500 shadow-yellow-100/50' :
+                        'border-gray-200'
+                      } transition-all hover:shadow-md overflow-hidden`}
+                  >
                     <CardHeader>
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">

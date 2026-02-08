@@ -17,9 +17,9 @@ import { ReviewList } from "@/components/ReviewList";
 import { MessageSquare, Tag } from "lucide-react";
 
 const tagColors = {
-  red: { bg: "bg-red-50 dark:bg-red-900/10", border: "border-red-500", text: "text-red-700 dark:text-red-400", label: "Uso na Biblioteca" },
-  yellow: { bg: "bg-yellow-50 dark:bg-yellow-900/10", border: "border-yellow-500", text: "text-yellow-700 dark:text-yellow-400", label: "1 Dia" },
-  white: { bg: "bg-gray-50 dark:bg-gray-800/10", border: "border-gray-400", text: "text-gray-700 dark:text-gray-300", label: "5 Dias" },
+  red: { bg: "bg-red-50 dark:bg-red-900/10", border: "border-red-500", text: "text-red-700 dark:text-red-400", label: "Etiqueta Vermelha (Uso Local)" },
+  yellow: { bg: "bg-yellow-50 dark:bg-yellow-900/10", border: "border-yellow-500", text: "text-yellow-700 dark:text-yellow-400", label: "Etiqueta Amarela (1 Dia)" },
+  white: { bg: "bg-gray-50 dark:bg-gray-800/10", border: "border-gray-400", text: "text-gray-700 dark:text-gray-300", label: "Etiqueta Branca (5 Dias)" },
 };
 
 export default function BookSearch() {
@@ -270,8 +270,8 @@ export default function BookSearch() {
                   key={book.id}
                   data-testid={`card-book-${book.id}`}
                   className={`border-2 ${book.tag === 'red' ? 'border-red-500 shadow-red-100/50' :
-                      book.tag === 'yellow' ? 'border-yellow-500 shadow-yellow-100/50' :
-                        'border-gray-200'
+                    book.tag === 'yellow' ? 'border-yellow-500 shadow-yellow-100/50' :
+                      'border-gray-200'
                     } transition-all hover:shadow-md overflow-hidden`}
                 >
                   <CardHeader>
