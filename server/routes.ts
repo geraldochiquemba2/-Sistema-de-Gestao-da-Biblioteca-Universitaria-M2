@@ -1535,12 +1535,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let allBooks: any[] = [];
 
       const searchPromises = [];
+      const TIMEOUT_MS = 8000; // 8 segundos
+
+      const fetchWithTimeout = async (url: string, options: any = {}) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), TIMEOUT_MS);
+        try {
+          const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+          });
+          clearTimeout(id);
+          return response;
+        } catch (error) {
+          clearTimeout(id);
+          throw error;
+        }
+      };
 
       // Google Books
       if (source === "all" || source === "google") {
         searchPromises.push((async () => {
           try {
-            const googleRes = await fetch(
+            const googleRes = await fetchWithTimeout(
               `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&filter=free-ebooks&maxResults=10&langRestrict=pt`
             );
             if (!googleRes.ok) return [];
@@ -1567,7 +1584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
             });
           } catch (err) {
-            console.error("Google Books error:", err);
+            console.error("Google Books timeout or error:", err);
             return [];
           }
         })());
@@ -1577,7 +1594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (source === "all" || source === "openlibrary") {
         searchPromises.push((async () => {
           try {
-            const openLibRes = await fetch(
+            const openLibRes = await fetchWithTimeout(
               `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=10&language=por`
             );
             if (!openLibRes.ok) return [];
@@ -1602,7 +1619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               isEpubAvailable: doc.has_fulltext
             }));
           } catch (err) {
-            console.error("Open Library error:", err);
+            console.error("Open Library timeout or error:", err);
             return [];
           }
         })());
@@ -1612,7 +1629,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (source === "all" || source === "gutenberg") {
         searchPromises.push((async () => {
           try {
-            const gutendexRes = await fetch(
+            const gutendexRes = await fetchWithTimeout(
               `https://gutendex.com/books?search=${encodeURIComponent(query)}&languages=pt`
             );
             if (!gutendexRes.ok) return [];
@@ -1637,7 +1654,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               isEpubAvailable: !!book.formats?.["application/epub+zip"]
             }));
           } catch (err) {
-            console.error("Gutendex error:", err);
+            console.error("Gutendex timeout or error:", err);
             return [];
           }
         })());
@@ -1647,7 +1664,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (source === "all" || source === "doab") {
         searchPromises.push((async () => {
           try {
-            const doabRes = await fetch(
+            const doabRes = await fetchWithTimeout(
               `https://directory.doabooks.org/rest/search?query=${encodeURIComponent(query)}&expand=metadata,bitstreams`,
               { headers: { "Accept": "application/json" } }
             );
@@ -1682,7 +1699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
             });
           } catch (err) {
-            console.error("DOAB error:", err);
+            console.error("DOAB timeout or error:", err);
             return [];
           }
         })());
