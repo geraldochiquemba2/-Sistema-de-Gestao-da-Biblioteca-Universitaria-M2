@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { BookUser, X, Send, Bot, User, Loader2, Minimize2, Volume2, VolumeX, Settings, Sparkles, AudioLines, Zap, Activity } from "lucide-react";
+import { BookUser, X, Send, Bot, User, Loader2, Minimize2, Volume2, VolumeX, Settings, Sparkles, AudioLines, Zap, Activity, Laugh, Smile } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -32,7 +32,7 @@ export function AIAssistant() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState<number | null>(null);
     const [voiceMode, setVoiceMode] = useState<"native" | "hd">("hd");
-    const [voiceEnergy, setVoiceEnergy] = useState<"calm" | "balanced" | "energetic">("balanced");
+    const [voiceEnergy, setVoiceEnergy] = useState<"calm" | "balanced" | "energetic" | "funny" | "lol">("balanced");
     const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
     const [selectedNativeVoice, setSelectedNativeVoice] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -76,8 +76,15 @@ export function AIAssistant() {
         }
 
         stopSpeaking();
-        const cleanedText = cleanTextForSpeech(text);
+        let cleanedText = cleanTextForSpeech(text);
         if (!cleanedText) return;
+
+        // Animação Vocal: Adicionar riso se o modo for Divertido ou Hilarante
+        if (voiceEnergy === "funny") {
+            cleanedText = "Hehe! " + cleanedText;
+        } else if (voiceEnergy === "lol") {
+            cleanedText = "Ahahaha! " + cleanedText;
+        }
 
         if (voiceMode === "native") {
             handleNativeSpeak(cleanedText, index);
@@ -107,8 +114,14 @@ export function AIAssistant() {
             utterance.lang = "pt-PT";
         }
 
-        // Ajustes de Energia/Personalidade
-        if (voiceEnergy === "energetic") {
+        // Ajustes de Energia/Personalidade/Humor
+        if (voiceEnergy === "lol") {
+            utterance.rate = 1.35;
+            utterance.pitch = 1.6;
+        } else if (voiceEnergy === "funny") {
+            utterance.rate = 1.25;
+            utterance.pitch = 1.4;
+        } else if (voiceEnergy === "energetic") {
             utterance.rate = 1.15;
             utterance.pitch = 1.15;
         } else if (voiceEnergy === "calm") {
@@ -132,8 +145,12 @@ export function AIAssistant() {
         const audio = new Audio(url);
         audioRef.current = audio;
 
-        // Ajuste de Energia em HD (apenas rate, pitch não é suportado nativamente na URL gTTS)
-        if (voiceEnergy === "energetic") {
+        // Ajuste de Energia em HD (apenas rate)
+        if (voiceEnergy === "lol") {
+            audio.playbackRate = 1.3;
+        } else if (voiceEnergy === "funny") {
+            audio.playbackRate = 1.2;
+        } else if (voiceEnergy === "energetic") {
             audio.playbackRate = 1.1;
         } else if (voiceEnergy === "calm") {
             audio.playbackRate = 0.9;
@@ -230,6 +247,20 @@ export function AIAssistant() {
 
                                             <DropdownMenuSeparator />
                                             <DropdownMenuLabel className="text-[10px] font-normal opacity-50 uppercase tracking-wider">Energia da Voz</DropdownMenuLabel>
+                                            <DropdownMenuItem onClick={() => setVoiceEnergy("lol")} className="flex items-center justify-between cursor-pointer">
+                                                <div className="flex items-center gap-2">
+                                                    <Laugh className="h-4 w-4 text-orange-500" />
+                                                    <span>Hilarante (Gargalhar)</span>
+                                                </div>
+                                                {voiceEnergy === "lol" && <div className="h-2 w-2 rounded-full bg-primary" />}
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => setVoiceEnergy("funny")} className="flex items-center justify-between cursor-pointer">
+                                                <div className="flex items-center gap-2">
+                                                    <Smile className="h-4 w-4 text-green-500" />
+                                                    <span>Divertida (Rir)</span>
+                                                </div>
+                                                {voiceEnergy === "funny" && <div className="h-2 w-2 rounded-full bg-primary" />}
+                                            </DropdownMenuItem>
                                             <DropdownMenuItem onClick={() => setVoiceEnergy("energetic")} className="flex items-center justify-between cursor-pointer">
                                                 <div className="flex items-center gap-2">
                                                     <Zap className="h-4 w-4 text-yellow-500" />
