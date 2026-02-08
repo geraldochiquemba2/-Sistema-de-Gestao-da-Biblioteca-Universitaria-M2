@@ -178,6 +178,17 @@ export function AIAssistant() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-1">
+                                    {messages.length > 0 && messages[messages.length - 1].role === "assistant" && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className={`h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20 ${isSpeaking === messages.length - 1 ? 'animate-pulse' : ''}`}
+                                            onClick={() => handleSpeak(messages[messages.length - 1].content, messages.length - 1)}
+                                            title="Ouvir última resposta"
+                                        >
+                                            {isSpeaking === messages.length - 1 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                                        </Button>
+                                    )}
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20">
