@@ -254,11 +254,14 @@ export default function Books() {
   };
 
   const { data: books, isLoading } = useQuery<any[]>({
-    queryKey: selectedCategoryFilter !== "all"
-      ? ["/api/books", { search: searchQuery, categoryId: selectedCategoryFilter }]
-      : searchQuery
-        ? ["/api/books", { search: searchQuery }]
-        : ["/api/books"],
+    queryKey: ["/api/books", searchQuery, selectedCategoryFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (searchQuery) params.append("search", searchQuery);
+      if (selectedCategoryFilter !== "all") params.append("categoryId", selectedCategoryFilter);
+      const res = await apiRequest("GET", `/api/books?${params.toString()}`);
+      return res.json();
+    }
   });
 
   const { data: categories } = useQuery<any[]>({

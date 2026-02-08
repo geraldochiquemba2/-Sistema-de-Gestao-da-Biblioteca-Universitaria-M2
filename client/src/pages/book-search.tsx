@@ -38,6 +38,10 @@ export default function BookSearch() {
 
   const { data: books, isLoading: booksLoading } = useQuery({
     queryKey: ["/api/books", queryString],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/books?${queryString}`);
+      return res.json();
+    }
   });
 
   const { data: categories } = useQuery({
