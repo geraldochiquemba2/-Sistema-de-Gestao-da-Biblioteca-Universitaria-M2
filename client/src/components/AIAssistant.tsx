@@ -3,9 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { BookUser, X, Send, Bot, User, Loader2, Minimize2, Volume2, VolumeX } from "lucide-react";
+import { BookUser, X, Send, Bot, User, Loader2, Minimize2, Volume2, VolumeX, Settings, Sparkles, AudioLines } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Message {
     role: "user" | "assistant";
@@ -23,7 +31,9 @@ export function AIAssistant() {
     ]);
     const [isLoading, setIsLoading] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState<number | null>(null);
+    const [voiceMode, setVoiceMode] = useState<"native" | "hd">("hd");
     const scrollRef = useRef<HTMLDivElement>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -33,34 +43,43 @@ export function AIAssistant() {
 
     const handleSpeak = (text: string, index: number) => {
         if (isSpeaking === index) {
-            window.speechSynthesis.cancel();
-            setIsSpeaking(null);
+            stopSpeaking();
             return;
         }
 
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
+        stopSpeaking();
 
-        // Sistema Inteligente de Seleção de Voz
+        if (voiceMode === "native") {
+            handleNativeSpeak(text, index);
+        } else {
+            handleHDSpeak(text, index);
+        }
+    };
+
+    const stopSpeaking = () => {
+        window.speechSynthesis.cancel();
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current = null;
+        }
+        setIsSpeaking(null);
+    };
+
+    const handleNativeSpeak = (text: string, index: number) => {
+        const utterance = new SpeechSynthesisUtterance(text);
         const voices = window.speechSynthesis.getVoices();
 
-        // Atribuir pontuação para cada voz disponível
         const ratedVoices = voices
-            .filter(v => v.lang.startsWith("pt-")) // Apenas vozes em Português
+            .filter(v => v.lang.startsWith("pt-"))
             .map(voice => {
                 let score = 0;
-
-                // Prioridade 1: Sotaque de Portugal (pt-PT) - mais comum em Angola/ISPTEC
                 if (voice.lang === "pt-PT") score += 50;
-
-                // Prioridade 2: Vozes de Alta Qualidade (Google, Microsoft, Naturais)
                 const name = voice.name.toLowerCase();
                 if (name.includes("google") || name.includes("microsoft") || name.includes("natural")) score += 100;
                 if (name.includes("premium") || name.includes("enhanced")) score += 30;
-
                 return { voice, score };
             })
-            .sort((a, b) => b.score - a.score); // Ordenar pela melhor pontuação
+            .sort((a, b) => b.score - a.score);
 
         const bestVoice = ratedVoices.length > 0 ? ratedVoices[0].voice : voices.find(v => v.lang.startsWith("pt-"));
 
@@ -68,17 +87,36 @@ export function AIAssistant() {
             utterance.voice = bestVoice;
             utterance.lang = bestVoice.lang;
         } else {
-            utterance.lang = "pt-PT"; // Fallback de idioma
+            utterance.lang = "pt-PT";
         }
 
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
-
         utterance.onend = () => setIsSpeaking(null);
         utterance.onerror = () => setIsSpeaking(null);
 
         setIsSpeaking(index);
         window.speechSynthesis.speak(utterance);
+    };
+
+    const handleHDSpeak = (text: string, index: number) => {
+        // gTTS Wrapper (Open Source approach for High Quality)
+        const cleanText = text.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, "").substring(0, 200);
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=pt-PT&client=tw-ob`;
+
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onended = () => setIsSpeaking(null);
+        audio.onerror = () => {
+            setIsSpeaking(null);
+            handleNativeSpeak(text, index); // Fallback
+        };
+
+        setIsSpeaking(index);
+        audio.play().catch(() => {
+            setIsSpeaking(null);
+            handleNativeSpeak(text, index);
+        });
     };
 
     const handleSend = async () => {
@@ -115,7 +153,7 @@ export function AIAssistant() {
                         exit={{ opacity: 0, scale: 0.8, y: 20 }}
                         className="mb-4 w-[350px] sm:w-[400px]"
                     >
-                        <Card className="shadow-2xl border-primary/20 bg-background/95 backdrop-blur-sm">
+                        <Card className="shadow-2xl border-primary/20 bg-background/95 backdrop-blur-sm overflow-hidden">
                             <CardHeader className="p-4 border-b bg-primary text-primary-foreground rounded-t-lg flex flex-row items-center justify-between space-y-0">
                                 <div className="flex items-center gap-2">
                                     <div className="p-2 bg-primary-foreground/10 rounded-full">
@@ -123,17 +161,47 @@ export function AIAssistant() {
                                     </div>
                                     <div>
                                         <CardTitle className="text-sm font-bold">Mentor Digital</CardTitle>
-                                        <p className="text-[10px] opacity-80">Online agora</p>
+                                        <p className="text-[10px] opacity-80">Qualidade: {voiceMode === "hd" ? "HD (Natural)" : "Padrão"}</p>
                                     </div>
                                 </div>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
-                                    onClick={() => setIsOpen(false)}
-                                >
-                                    <Minimize2 className="h-4 w-4" />
-                                </Button>
+                                <div className="flex items-center gap-1">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20">
+                                                <Settings className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-56">
+                                            <DropdownMenuLabel>Definições de Áudio</DropdownMenuLabel>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={() => setVoiceMode("hd")} className="flex items-center justify-between cursor-pointer">
+                                                <div className="flex items-center gap-2">
+                                                    <Sparkles className="h-4 w-4 text-primary" />
+                                                    <span>Voz HD (Google)</span>
+                                                </div>
+                                                {voiceMode === "hd" && <div className="h-2 w-2 rounded-full bg-primary" />}
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => setVoiceMode("native")} className="flex items-center justify-between cursor-pointer">
+                                                <div className="flex items-center gap-2">
+                                                    <AudioLines className="h-4 w-4" />
+                                                    <span>Voz Nativa (eSpeak)</span>
+                                                </div>
+                                                {voiceMode === "native" && <div className="h-2 w-2 rounded-full bg-primary" />}
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
+                                        onClick={() => {
+                                            stopSpeaking();
+                                            setIsOpen(false);
+                                        }}
+                                    >
+                                        <Minimize2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </CardHeader>
                             <CardContent className="p-0">
                                 <ScrollArea className="h-[400px] p-4" ref={scrollRef}>
@@ -203,7 +271,7 @@ export function AIAssistant() {
                 size="lg"
                 className={`h-14 w-14 rounded-full shadow-lg transition-transform hover:scale-110 active:scale-95 ${isOpen ? 'rotate-90' : ''}`}
                 onClick={() => {
-                    if (isOpen) window.speechSynthesis.cancel();
+                    if (isOpen) stopSpeaking();
                     setIsOpen(!isOpen);
                 }}
             >
