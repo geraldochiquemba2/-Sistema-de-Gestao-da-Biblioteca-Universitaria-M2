@@ -1215,21 +1215,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const result = JSON.parse(visionResponse.choices[0].message.content || "{}");
 
         // Auto-match category
-        if (currentCategories.length > 0 && result.title) {
+        if (currentCategories.length > 0) {
           const catMatching = await groq.chat.completions.create({
             model: "llama-3.3-70b-versatile",
             messages: [{
               role: "system",
-              content: `Selecione o ID da categoria que melhor se adapta a este livro. Categorias: ${currentCategories.map((c: any) => `"${c.name}" (ID: ${c.id})`).join(", ")}. Retorne APENAS o ID.`
+              content: `Você é um bibliotecário especialista. Analise o título, autor e descrição do livro e selecione a categoria MAIS ADEQUADA.
+              Importante: Se não houver uma categoria óbvia, selecione a que mais se aproxima pelo tema.
+              Categorias disponíveis (retorne APENAS o ID numérico): ${currentCategories.map((c: any) => `"${c.name}" (ID: ${c.id})`).join(", ")}.`
             }, {
               role: "user",
-              content: `Livro: ${result.title} - ${result.author} (${result.description})`
+              content: `Livro: ${result.title} - ${result.author}. Descrição: ${result.description || "N/A"}`
             }]
           });
-          const suggestedId = catMatching.choices[0].message.content?.trim();
-          // Verify if it's a valid ID from the list
-          if (currentCategories.some((c: any) => c.id === suggestedId)) {
-            result.categoryId = suggestedId;
+
+          // Extract only the numeric ID from the response (in case AI adds text)
+          const rawId = catMatching.choices[0].message.content || "";
+          const match = rawId.match(/\d+/);
+          const suggestedId = match ? match[0] : null;
+
+          if (suggestedId && currentCategories.some((c: any) => c.id.toString() === suggestedId.toString())) {
+            result.categoryId = parseInt(suggestedId);
           }
         }
 
@@ -1278,17 +1284,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           {
             role: "system",
             content: `Você é um bibliotecário especialista. Retorne APENAS o ID da categoria que melhor se adapta ao livro. 
+            Se não houver categoria exata, use o seu conhecimento para escolher a mais próxima pelo tema.
             Opções: ${categories.map((c: any) => `"${c.name}" (ID: ${c.id})`).join(", ")}.`
           },
           {
             role: "user",
-            content: `Livro: ${book.title} - ${book.author}. Descrição: ${book.description}`
+            content: `Livro: ${book.title} - ${book.author}. Descrição: ${book.description || "N/A"}`
           }
         ],
         temperature: 0.1
       });
 
-      const categoryId = response.choices[0].message.content?.trim();
+      const rawId = response.choices[0].message.content || "";
+      const match = rawId.match(/\d+/);
+      const categoryId = match ? parseInt(match[0]) : null;
+
       res.json({ categoryId });
     } catch (error: any) {
       res.status(500).json({ message: "Erro ao sugerir categoria: " + error.message });
