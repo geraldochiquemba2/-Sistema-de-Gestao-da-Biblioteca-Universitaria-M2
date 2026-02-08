@@ -1534,152 +1534,166 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let allBooks: any[] = [];
 
+      const searchPromises = [];
 
       // Google Books
       if (source === "all" || source === "google") {
-        try {
-          const googleRes = await fetch(
-            `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&filter=free-ebooks&maxResults=10&langRestrict=pt`
-          );
-          const data = await googleRes.json();
-
-          const googleBooks = (data.items || []).map((item: any) => {
-            const info = item.volumeInfo;
-            const access = item.accessInfo;
-
-            return {
-              id: `google-${item.id}`,
-              source: "Google Books",
-              title: info.title,
-              authors: info.authors || ["Autor Desconhecido"],
-              publisher: info.publisher,
-              publishedDate: info.publishedDate,
-              description: info.description,
-              pageCount: info.pageCount,
-              categories: info.categories,
-              imageLinks: info.imageLinks,
-              language: info.language,
-              previewLink: info.previewLink,
-              downloadLink: access.pdf?.downloadLink || access.epub?.downloadLink || info.previewLink,
-              isPdfAvailable: access.pdf?.isAvailable,
-              isEpubAvailable: access.epub?.isAvailable
-            };
-          });
-          allBooks = allBooks.concat(googleBooks);
-        } catch (err) {
-          console.error("Google Books error:", err);
-        }
+        searchPromises.push((async () => {
+          try {
+            const googleRes = await fetch(
+              `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&filter=free-ebooks&maxResults=10&langRestrict=pt`
+            );
+            if (!googleRes.ok) return [];
+            const data = await googleRes.json();
+            return (data.items || []).map((item: any) => {
+              const info = item.volumeInfo;
+              const access = item.accessInfo;
+              return {
+                id: `google-${item.id}`,
+                source: "Google Books",
+                title: info.title,
+                authors: info.authors || ["Autor Desconhecido"],
+                publisher: info.publisher,
+                publishedDate: info.publishedDate,
+                description: info.description,
+                pageCount: info.pageCount,
+                categories: info.categories,
+                imageLinks: info.imageLinks,
+                language: info.language,
+                previewLink: info.previewLink,
+                downloadLink: access.pdf?.downloadLink || access.epub?.downloadLink || info.previewLink,
+                isPdfAvailable: access.pdf?.isAvailable,
+                isEpubAvailable: access.epub?.isAvailable
+              };
+            });
+          } catch (err) {
+            console.error("Google Books error:", err);
+            return [];
+          }
+        })());
       }
 
       // Open Library
       if (source === "all" || source === "openlibrary") {
-        try {
-          const openLibRes = await fetch(
-            `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=10&language=por`
-          );
-          const data = await openLibRes.json();
-
-          const openLibBooks = (data.docs || []).map((doc: any) => ({
-            id: `openlibrary-${doc.key}`,
-            source: "Open Library",
-            title: doc.title,
-            authors: doc.author_name || ["Autor Desconhecido"],
-            publisher: doc.publisher?.[0],
-            publishedDate: doc.first_publish_year?.toString(),
-            description: doc.first_sentence?.[0],
-            pageCount: doc.number_of_pages_median,
-            categories: doc.subject?.slice(0, 3),
-            imageLinks: doc.cover_i ? {
-              thumbnail: `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`
-            } : null,
-            language: doc.language?.[0],
-            previewLink: `https://openlibrary.org${doc.key}`,
-            downloadLink: `https://openlibrary.org${doc.key}`,
-            isPdfAvailable: doc.has_fulltext,
-            isEpubAvailable: doc.has_fulltext
-          }));
-          allBooks = allBooks.concat(openLibBooks);
-        } catch (err) {
-          console.error("Open Library error:", err);
-        }
+        searchPromises.push((async () => {
+          try {
+            const openLibRes = await fetch(
+              `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=10&language=por`
+            );
+            if (!openLibRes.ok) return [];
+            const data = await openLibRes.json();
+            return (data.docs || []).map((doc: any) => ({
+              id: `openlibrary-${doc.key}`,
+              source: "Open Library",
+              title: doc.title,
+              authors: doc.author_name || ["Autor Desconhecido"],
+              publisher: doc.publisher?.[0],
+              publishedDate: doc.first_publish_year?.toString(),
+              description: doc.first_sentence?.[0],
+              pageCount: doc.number_of_pages_median,
+              categories: doc.subject?.slice(0, 3),
+              imageLinks: doc.cover_i ? {
+                thumbnail: `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`
+              } : null,
+              language: doc.language?.[0],
+              previewLink: `https://openlibrary.org${doc.key}`,
+              downloadLink: `https://openlibrary.org${doc.key}`,
+              isPdfAvailable: doc.has_fulltext,
+              isEpubAvailable: doc.has_fulltext
+            }));
+          } catch (err) {
+            console.error("Open Library error:", err);
+            return [];
+          }
+        })());
       }
 
       // Project Gutenberg (Gutendex)
       if (source === "all" || source === "gutenberg") {
-        try {
-          const gutendexRes = await fetch(
-            `https://gutendex.com/books?search=${encodeURIComponent(query)}&languages=pt`
-          );
-          const data = await gutendexRes.json();
-
-          const gutenbergBooks = (data.results || []).map((book: any) => ({
-            id: `gutenberg-${book.id}`,
-            source: "Project Gutenberg",
-            title: book.title,
-            authors: book.authors?.map((a: any) => a.name) || ["Autor Desconhecido"],
-            publisher: "Project Gutenberg",
-            publishedDate: null,
-            description: book.subjects?.join(", "),
-            pageCount: null,
-            categories: book.bookshelves,
-            imageLinks: book.formats?.["image/jpeg"] ? {
-              thumbnail: book.formats["image/jpeg"]
-            } : null,
-            language: book.languages?.[0],
-            previewLink: `https://www.gutenberg.org/ebooks/${book.id}`,
-            downloadLink: book.formats?.["application/pdf"] || book.formats?.["application/epub+zip"] || book.formats?.["text/html"],
-            isPdfAvailable: !!book.formats?.["application/pdf"],
-            isEpubAvailable: !!book.formats?.["application/epub+zip"]
-          }));
-          allBooks = allBooks.concat(gutenbergBooks);
-        } catch (err) {
-          console.error("Gutendex error:", err);
-        }
+        searchPromises.push((async () => {
+          try {
+            const gutendexRes = await fetch(
+              `https://gutendex.com/books?search=${encodeURIComponent(query)}&languages=pt`
+            );
+            if (!gutendexRes.ok) return [];
+            const data = await gutendexRes.json();
+            return (data.results || []).map((book: any) => ({
+              id: `gutenberg-${book.id}`,
+              source: "Project Gutenberg",
+              title: book.title,
+              authors: book.authors?.map((a: any) => a.name) || ["Autor Desconhecido"],
+              publisher: "Project Gutenberg",
+              publishedDate: null,
+              description: book.subjects?.join(", "),
+              pageCount: null,
+              categories: book.bookshelves,
+              imageLinks: book.formats?.["image/jpeg"] ? {
+                thumbnail: book.formats["image/jpeg"]
+              } : null,
+              language: book.languages?.[0],
+              previewLink: `https://www.gutenberg.org/ebooks/${book.id}`,
+              downloadLink: book.formats?.["application/pdf"] || book.formats?.["application/epub+zip"] || book.formats?.["text/html"],
+              isPdfAvailable: !!book.formats?.["application/pdf"],
+              isEpubAvailable: !!book.formats?.["application/epub+zip"]
+            }));
+          } catch (err) {
+            console.error("Gutendex error:", err);
+            return [];
+          }
+        })());
       }
 
       // DOAB (Directory of Open Access Books)
       if (source === "all" || source === "doab") {
-        try {
-          const doabRes = await fetch(
-            `https://directory.doabooks.org/rest/search?query=${encodeURIComponent(query)}&expand=metadata,bitstreams`,
-            { headers: { "Accept": "application/json" } }
-          );
-          const data = await doabRes.json();
-
-          const doabBooks = (data || []).slice(0, 10).map((item: any) => {
-            const metadata = item.metadata || [];
-            const getMeta = (key: string) => metadata.find((m: any) => m.key === key)?.value;
-
-            // Find PDF link in bitstreams
-            const pdfBitstream = (item.bitstreams || []).find((b: any) =>
-              b.mimeType === "application/pdf" || b.name?.toLowerCase().endsWith(".pdf")
+        searchPromises.push((async () => {
+          try {
+            const doabRes = await fetch(
+              `https://directory.doabooks.org/rest/search?query=${encodeURIComponent(query)}&expand=metadata,bitstreams`,
+              { headers: { "Accept": "application/json" } }
             );
+            if (!doabRes.ok) return [];
+            const data = await doabRes.json();
+            const items = Array.isArray(data) ? data : [];
 
-            const downloadLink = pdfBitstream ? `https://directory.doabooks.org${pdfBitstream.retrieveLink}` : null;
+            return items.slice(0, 10).map((item: any) => {
+              const metadata = item.metadata || [];
+              const getMeta = (key: string) => metadata.find((m: any) => m.key === key)?.value;
+              const pdfBitstream = (item.bitstreams || []).find((b: any) =>
+                b.mimeType === "application/pdf" || b.name?.toLowerCase().endsWith(".pdf")
+              );
+              const downloadLink = pdfBitstream ? `https://directory.doabooks.org${pdfBitstream.retrieveLink}` : null;
 
-            return {
-              id: `doab-${item.id}`,
-              source: "DOAB (Académico)",
-              title: getMeta("dc.title") || "Título Desconhecido",
-              authors: [getMeta("dc.contributor.author") || "Autor Desconhecido"],
-              publisher: getMeta("dc.publisher") || "Editora Desconhecida",
-              publishedDate: getMeta("dc.date.issued"),
-              description: getMeta("dc.description.abstract") || "Livro académico em acesso aberto.",
-              pageCount: null,
-              categories: [getMeta("dc.subject")],
-              imageLinks: null,
-              language: getMeta("dc.language.iso"),
-              previewLink: `https://directory.doabooks.org/handle/${item.handle}`,
-              downloadLink: downloadLink,
-              isPdfAvailable: !!pdfBitstream,
-              isEpubAvailable: false
-            };
-          });
-          allBooks = allBooks.concat(doabBooks);
-        } catch (err) {
-          console.error("DOAB error:", err);
-        }
+              return {
+                id: `doab-${item.id}`,
+                source: "DOAB (Académico)",
+                title: getMeta("dc.title") || "Título Desconhecido",
+                authors: [getMeta("dc.contributor.author") || "Autor Desconhecido"],
+                publisher: getMeta("dc.publisher") || "Editora Desconhecida",
+                publishedDate: getMeta("dc.date.issued"),
+                description: getMeta("dc.description.abstract") || "Livro académico em acesso aberto.",
+                pageCount: null,
+                categories: [getMeta("dc.subject")],
+                imageLinks: null,
+                language: getMeta("dc.language.iso"),
+                previewLink: `https://directory.doabooks.org/handle/${item.handle}`,
+                downloadLink: downloadLink,
+                isPdfAvailable: !!pdfBitstream,
+                isEpubAvailable: false
+              };
+            });
+          } catch (err) {
+            console.error("DOAB error:", err);
+            return [];
+          }
+        })());
       }
+
+      const results = await Promise.allSettled(searchPromises);
+      results.forEach(result => {
+        if (result.status === "fulfilled") {
+          allBooks = allBooks.concat(result.value);
+        }
+      });
 
       res.json(allBooks);
     } catch (error: any) {
