@@ -888,8 +888,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pendingFines = fines.filter(f => f.status === "pending");
       const paidFines = fines.filter(f => f.status === "paid");
 
-      const totalFinesAmount = pendingFines.reduce((sum, f) => sum + parseFloat(f.amount), 0);
+      const persistentPendingAmount = pendingFines.reduce((sum, f) => sum + parseFloat(f.amount), 0);
       const paidFinesAmount = paidFines.reduce((sum, f) => sum + parseFloat(f.amount), 0);
+
+      // Add dynamic fines for active overdue loans to the total pending amount
+      let dynamicPendingAmount = 0;
+      for (const loan of overdueLoans) {
+        // Only calculate if not already in persistent pending fines (optional check, but safer)
+        const fineInfo = calculateFine(new Date(loan.dueDate), new Date());
+        dynamicPendingAmount += fineInfo.amount;
+      }
+
+      const totalFinesAmount = persistentPendingAmount + dynamicPendingAmount + paidFinesAmount;
+      const totalPendingAmount = persistentPendingAmount + dynamicPendingAmount;
 
       // Assume blocked if they have fines > MAX (need to import constants or re-use logic, but simple check for now)
       // Or just check if user status is explicitly blocked if we had that, but we calculate it dynamically usually.
@@ -901,16 +912,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         totalBooks: books.length,
-        availableBooks: books.filter(b => b.availableCopies > 0).length, // Count available unique titles
+        availableBooks: books.filter(b => b.availableCopies > 0).length,
         totalCopies: books.reduce((sum, b) => sum + b.totalCopies, 0),
         totalAvailableCopies: books.reduce((sum, b) => sum + b.availableCopies, 0),
         totalUsers: users.length,
         activeLoans: activeLoans.length,
         overdueLoans: overdueLoans.length,
         pendingFines: pendingFines.length,
-        totalFinesAmount,
-        paidFinesAmount,
-        blockedUsers
+        totalFinesAmount: totalFinesAmount,
+        totalPendingAmount: totalPendingAmount,
+        paidFinesAmount: paidFinesAmount,
+        blockedUsers: blockedUsers
       });
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar estatísticas" });
