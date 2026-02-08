@@ -1022,7 +1022,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const response = await groq.chat.completions.create({
-        model: "llama-3.2-11b-vision-preview",
+        model: "meta-llama/llama-4-scout-17b-16e-instruct",
         messages: [
           {
             role: "user",
@@ -1138,7 +1138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 1. Process Image with Groq Vision if provided
       if (image) {
         const visionResponse = await groq.chat.completions.create({
-          model: "llama-3.2-11b-vision-preview",
+          model: "meta-llama/llama-4-scout-17b-16e-instruct",
           messages: [
             {
               role: "user",
@@ -1949,7 +1949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     Seja amigável e incentive a leitura.`;
 
-      const modelToUse = image ? "llama-3.2-11b-vision-preview" : "llama-3.3-70b-versatile";
+      const modelToUse = image ? "meta-llama/llama-4-scout-17b-16e-instruct" : "llama-3.3-70b-versatile";
 
       const groqMessages: any[] = [
         { role: "system", content: systemPrompt }
