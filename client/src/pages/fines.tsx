@@ -55,9 +55,17 @@ export default function Fines() {
     },
   });
 
-  const filteredFines = (fines || []).filter(
-    (fine) => searchQuery === "" // Show all for now
-  );
+  const normalize = (str: string) =>
+    str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const filteredFines = (fines || []).filter((fine) => {
+    if (searchQuery === "") return true;
+    const searchNormalized = normalize(searchQuery);
+    return (
+      normalize(fine.userName || "").includes(searchNormalized) ||
+      normalize(fine.userEmail || "").includes(searchNormalized)
+    );
+  });
 
   const totalPending = (fines || [])
     .filter((f) => f.status === "pending")

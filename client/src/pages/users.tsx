@@ -62,10 +62,14 @@ export default function Users() {
     queryKey: ["/api/users"],
   });
 
+  const normalize = (str: string) =>
+    str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
   const filteredUsers = (users || []).filter((user) => {
+    const searchNormalized = normalize(searchQuery);
     const matchesSearch =
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase());
+      normalize(user.name).includes(searchNormalized) ||
+      normalize(user.email).includes(searchNormalized);
     const matchesType = typeFilter === "all" || user.userType === typeFilter;
     return matchesSearch && matchesType;
   });

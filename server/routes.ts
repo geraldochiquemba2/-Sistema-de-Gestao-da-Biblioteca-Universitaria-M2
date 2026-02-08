@@ -56,6 +56,13 @@ const MAX_RESERVATIONS_PER_USER = 3;
 const RESERVATION_PICKUP_HOURS = 48;
 
 // Helper functions
+function normalizeString(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 function calculateDueDate(userType: string, bookTag: string): Date {
   const now = new Date();
   let days = 0;
@@ -358,11 +365,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Apply search filter
       if (search && typeof search === "string") {
-        const searchLower = search.toLowerCase();
+        const searchNormalized = normalizeString(search);
         books = books.filter(book =>
-          book.title.toLowerCase().includes(searchLower) ||
-          book.author.toLowerCase().includes(searchLower) ||
-          (book.isbn && book.isbn.toLowerCase().includes(searchLower))
+          normalizeString(book.title).includes(searchNormalized) ||
+          normalizeString(book.author).includes(searchNormalized) ||
+          (book.isbn && normalizeString(book.isbn).includes(searchNormalized))
         );
       }
 
