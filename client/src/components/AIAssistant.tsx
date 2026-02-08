@@ -32,14 +32,41 @@ export function AIAssistant() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState<number | null>(null);
     const [voiceMode, setVoiceMode] = useState<"native" | "hd">("hd");
+    const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+    const [selectedNativeVoice, setSelectedNativeVoice] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    useEffect(() => {
+        const loadVoices = () => {
+            const voices = window.speechSynthesis.getVoices();
+            const ptVoices = voices.filter(v => v.lang.startsWith("pt-"));
+            setAvailableVoices(ptVoices);
+
+            if (ptVoices.length > 0 && !selectedNativeVoice) {
+                // Tenta encontrar pt-PT primeiro, senão pega a primeira disponível
+                const best = ptVoices.find(v => v.lang === "pt-PT") || ptVoices[0];
+                setSelectedNativeVoice(best.name);
+            }
+        };
+
+        loadVoices();
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+    }, [selectedNativeVoice]);
 
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages]);
+
+    const cleanTextForSpeech = (text: string) => {
+        // Regex robusta para remover emojis e símbolos especiais que o TTS tenta ler
+        return text
+            .replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, "")
+            .replace(/[😊🚀📚🔊✨⚙️🤖🏆💎✅🎨💡📝🔍📅⏳📌⚠️❌🛑]/g, "") // Emojis comuns
+            .trim();
+    };
 
     const handleSpeak = (text: string, index: number) => {
         if (isSpeaking === index) {
@@ -48,11 +75,13 @@ export function AIAssistant() {
         }
 
         stopSpeaking();
+        const cleanedText = cleanTextForSpeech(text);
+        if (!cleanedText) return;
 
         if (voiceMode === "native") {
-            handleNativeSpeak(text, index);
+            handleNativeSpeak(cleanedText, index);
         } else {
-            handleHDSpeak(text, index);
+            handleHDSpeak(cleanedText, index);
         }
     };
 
@@ -68,30 +97,16 @@ export function AIAssistant() {
     const handleNativeSpeak = (text: string, index: number) => {
         const utterance = new SpeechSynthesisUtterance(text);
         const voices = window.speechSynthesis.getVoices();
+        const voice = voices.find(v => v.name === selectedNativeVoice) || voices.find(v => v.lang.startsWith("pt-"));
 
-        const ratedVoices = voices
-            .filter(v => v.lang.startsWith("pt-"))
-            .map(voice => {
-                let score = 0;
-                if (voice.lang === "pt-PT") score += 50;
-                const name = voice.name.toLowerCase();
-                if (name.includes("google") || name.includes("microsoft") || name.includes("natural")) score += 100;
-                if (name.includes("premium") || name.includes("enhanced")) score += 30;
-                return { voice, score };
-            })
-            .sort((a, b) => b.score - a.score);
-
-        const bestVoice = ratedVoices.length > 0 ? ratedVoices[0].voice : voices.find(v => v.lang.startsWith("pt-"));
-
-        if (bestVoice) {
-            utterance.voice = bestVoice;
-            utterance.lang = bestVoice.lang;
+        if (voice) {
+            utterance.voice = voice;
+            utterance.lang = voice.lang;
         } else {
             utterance.lang = "pt-PT";
         }
 
         utterance.rate = 1.0;
-        utterance.pitch = 1.0;
         utterance.onend = () => setIsSpeaking(null);
         utterance.onerror = () => setIsSpeaking(null);
 
@@ -100,9 +115,7 @@ export function AIAssistant() {
     };
 
     const handleHDSpeak = (text: string, index: number) => {
-        // gTTS Wrapper (Open Source approach for High Quality)
-        const cleanText = text.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, "").substring(0, 200);
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=pt-PT&client=tw-ob`;
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.substring(0, 200))}&tl=pt-PT&client=tw-ob`;
 
         const audio = new Audio(url);
         audioRef.current = audio;
@@ -171,7 +184,7 @@ export function AIAssistant() {
                                                 <Settings className="h-4 w-4" />
                                             </Button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="w-56">
+                                        <DropdownMenuContent align="end" className="w-64">
                                             <DropdownMenuLabel>Definições de Áudio</DropdownMenuLabel>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem onClick={() => setVoiceMode("hd")} className="flex items-center justify-between cursor-pointer">
@@ -181,13 +194,32 @@ export function AIAssistant() {
                                                 </div>
                                                 {voiceMode === "hd" && <div className="h-2 w-2 rounded-full bg-primary" />}
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => setVoiceMode("native")} className="flex items-center justify-between cursor-pointer">
-                                                <div className="flex items-center gap-2">
-                                                    <AudioLines className="h-4 w-4" />
-                                                    <span>Voz Nativa (eSpeak)</span>
+
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuLabel className="text-[10px] font-normal opacity-50 uppercase tracking-wider">Vozes do Sistema</DropdownMenuLabel>
+                                            {availableVoices.length === 0 && (
+                                                <div className="px-2 py-1.5 text-xs text-muted-foreground italic">
+                                                    Nenhuma voz nativa encontrada
                                                 </div>
-                                                {voiceMode === "native" && <div className="h-2 w-2 rounded-full bg-primary" />}
-                                            </DropdownMenuItem>
+                                            )}
+                                            {availableVoices.map((voice) => (
+                                                <DropdownMenuItem
+                                                    key={voice.name}
+                                                    onClick={() => {
+                                                        setVoiceMode("native");
+                                                        setSelectedNativeVoice(voice.name);
+                                                    }}
+                                                    className="flex items-center justify-between cursor-pointer"
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <AudioLines className="h-4 w-4" />
+                                                        <span className="truncate max-w-[150px]">{voice.name.replace("Microsoft ", "").replace("Google ", "")}</span>
+                                                    </div>
+                                                    {voiceMode === "native" && selectedNativeVoice === voice.name && (
+                                                        <div className="h-2 w-2 rounded-full bg-primary" />
+                                                    )}
+                                                </DropdownMenuItem>
+                                            ))}
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                     <Button
