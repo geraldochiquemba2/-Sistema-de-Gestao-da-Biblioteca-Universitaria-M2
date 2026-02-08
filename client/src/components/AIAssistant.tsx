@@ -129,7 +129,7 @@ export function AIAssistant() {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className={`h-6 w-6 absolute -right-8 top-1 opacity-0 group-hover:opacity-100 transition-opacity ${isSpeaking === i ? 'opacity-100 text-primary' : 'text-muted-foreground'}`}
+                                                            className={`h-6 w-6 absolute -right-8 top-1 transition-opacity ${isSpeaking === i ? 'text-primary' : 'text-muted-foreground'}`}
                                                             onClick={() => handleSpeak(m.content, i)}
                                                         >
                                                             {isSpeaking === i ? <VolumeX className="h-4 w-4 animate-pulse" /> : <Volume2 className="h-4 w-4" />}
