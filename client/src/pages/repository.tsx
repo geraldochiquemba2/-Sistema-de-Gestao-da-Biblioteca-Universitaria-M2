@@ -111,6 +111,8 @@ export default function Repository() {
                             <SelectItem value="google">Google Books</SelectItem>
                             <SelectItem value="openlibrary">Open Library</SelectItem>
                             <SelectItem value="gutenberg">Gutenberg</SelectItem>
+                            <SelectItem value="doab">DOAB (PDFs Académicos)</SelectItem>
+                            <SelectItem value="welib">welib.org (Busca Externa)</SelectItem>
                         </SelectContent>
                     </Select>
                     <Input
@@ -119,10 +121,21 @@ export default function Repository() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="flex-1"
                     />
-                    <Button type="submit" disabled={isLoading}>
-                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
-                        Pesquisar
-                    </Button>
+                    {source === "welib" ? (
+                        <Button
+                            type="button"
+                            className="bg-[#0056b3] hover:bg-[#004494]"
+                            onClick={() => window.open(`https://welib.org/search?q=${encodeURIComponent(searchQuery)}`, "_blank")}
+                        >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Buscar na welib.org
+                        </Button>
+                    ) : (
+                        <Button type="submit" disabled={isLoading}>
+                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
+                            Pesquisar
+                        </Button>
+                    )}
                 </form>
             </Card>
 
@@ -219,10 +232,10 @@ export default function Repository() {
 
                             <CardFooter className="pt-4 border-t gap-2">
                                 {book.downloadLink ? (
-                                    <Button className="w-full" asChild>
+                                    <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-bold" asChild>
                                         <a href={book.downloadLink} target="_blank" rel="noreferrer">
                                             <Download className="h-4 w-4 mr-2" />
-                                            Baixar
+                                            Baixar Agora
                                         </a>
                                     </Button>
                                 ) : (

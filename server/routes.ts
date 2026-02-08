@@ -1627,13 +1627,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
             } : null,
             language: book.languages?.[0],
             previewLink: `https://www.gutenberg.org/ebooks/${book.id}`,
-            downloadLink: book.formats?.["application/epub+zip"] || book.formats?.["application/pdf"] || book.formats?.["text/html"],
+            downloadLink: book.formats?.["application/pdf"] || book.formats?.["application/epub+zip"] || book.formats?.["text/html"],
             isPdfAvailable: !!book.formats?.["application/pdf"],
             isEpubAvailable: !!book.formats?.["application/epub+zip"]
           }));
           allBooks = allBooks.concat(gutenbergBooks);
         } catch (err) {
           console.error("Gutendex error:", err);
+        }
+      }
+
+      // DOAB (Directory of Open Access Books)
+      if (source === "all" || source === "doab") {
+        try {
+          const doabRes = await fetch(
+            `https://directory.doabooks.org/rest/search?query=${encodeURIComponent(query)}&expand=metadata,bitstreams`,
+            { headers: { "Accept": "application/json" } }
+          );
+          const data = await doabRes.json();
+
+          const doabBooks = (data || []).slice(0, 10).map((item: any) => {
+            const metadata = item.metadata || [];
+            const getMeta = (key: string) => metadata.find((m: any) => m.key === key)?.value;
+
+            // Find PDF link in bitstreams
+            const pdfBitstream = (item.bitstreams || []).find((b: any) =>
+              b.mimeType === "application/pdf" || b.name?.toLowerCase().endsWith(".pdf")
+            );
+
+            const downloadLink = pdfBitstream ? `https://directory.doabooks.org${pdfBitstream.retrieveLink}` : null;
+
+            return {
+              id: `doab-${item.id}`,
+              source: "DOAB (Académico)",
+              title: getMeta("dc.title") || "Título Desconhecido",
+              authors: [getMeta("dc.contributor.author") || "Autor Desconhecido"],
+              publisher: getMeta("dc.publisher") || "Editora Desconhecida",
+              publishedDate: getMeta("dc.date.issued"),
+              description: getMeta("dc.description.abstract") || "Livro académico em acesso aberto.",
+              pageCount: null,
+              categories: [getMeta("dc.subject")],
+              imageLinks: null,
+              language: getMeta("dc.language.iso"),
+              previewLink: `https://directory.doabooks.org/handle/${item.handle}`,
+              downloadLink: downloadLink,
+              isPdfAvailable: !!pdfBitstream,
+              isEpubAvailable: false
+            };
+          });
+          allBooks = allBooks.concat(doabBooks);
+        } catch (err) {
+          console.error("DOAB error:", err);
         }
       }
 
