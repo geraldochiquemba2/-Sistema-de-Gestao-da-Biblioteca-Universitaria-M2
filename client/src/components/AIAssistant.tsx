@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { BookUser, X, Send, Bot, User, Loader2, Minimize2, Volume2, VolumeX, Settings, Sparkles, AudioLines, Zap, Activity, Laugh, Smile } from "lucide-react";
+import { BookUser, X, Send, Bot, User, Loader2, Minimize2, Volume2, VolumeX, Settings, Sparkles, AudioLines, Zap, Activity, Laugh, Smile, ImagePlus, Globe } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -35,7 +35,10 @@ export function AIAssistant() {
     const [voiceEnergy, setVoiceEnergy] = useState<"calm" | "balanced" | "energetic" | "funny" | "lol">("balanced");
     const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
     const [selectedNativeVoice, setSelectedNativeVoice] = useState<string | null>(null);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
@@ -171,17 +174,40 @@ export function AIAssistant() {
         });
     };
 
-    const handleSend = async () => {
-        if (!input.trim() || isLoading) return;
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                setSelectedImage(base64String);
+                setImagePreview(base64String);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
-        const userMessage: Message = { role: "user", content: input };
+    const handleSend = async () => {
+        if ((!input.trim() && !selectedImage) || isLoading) return;
+
+        const userMessage: Message = {
+            role: "user",
+            content: input + (selectedImage ? "\n[Imagem enviada]" : "")
+        };
+
         setMessages((prev) => [...prev, userMessage]);
+        const currentInput = input;
+        const currentImage = selectedImage;
+
         setInput("");
+        setSelectedImage(null);
+        setImagePreview(null);
         setIsLoading(true);
 
         try {
             const res = await apiRequest("POST", "/api/chat", {
-                messages: [...messages, userMessage]
+                messages: [...messages, userMessage],
+                image: currentImage
             });
             const data = await res.json();
             setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
@@ -355,7 +381,25 @@ export function AIAssistant() {
                                     </div>
                                 </ScrollArea>
                             </CardContent>
-                            <CardFooter className="p-3 border-t bg-muted/30">
+                            <CardFooter className="p-3 border-t bg-muted/30 flex flex-col gap-2">
+                                {imagePreview && (
+                                    <div className="relative self-start mb-1 group">
+                                        <img
+                                            src={imagePreview}
+                                            alt="Preview"
+                                            className="h-16 w-16 object-cover rounded-md border shadow-sm"
+                                        />
+                                        <button
+                                            onClick={() => {
+                                                setSelectedImage(null);
+                                                setImagePreview(null);
+                                            }}
+                                            className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </div>
+                                )}
                                 <form
                                     onSubmit={(e) => {
                                         e.preventDefault();
@@ -363,14 +407,30 @@ export function AIAssistant() {
                                     }}
                                     className="flex w-full gap-2"
                                 >
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        ref={fileInputRef}
+                                        onChange={handleImageChange}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-muted-foreground hover:text-primary"
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
+                                        <ImagePlus className="h-5 w-5" />
+                                    </Button>
                                     <Input
-                                        placeholder="Pergunte ao mentor..."
+                                        placeholder="Pergunte ou envie uma foto..."
                                         value={input}
                                         onChange={(e) => setInput(e.target.value)}
                                         disabled={isLoading}
                                         className="flex-1 bg-background"
                                     />
-                                    <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
+                                    <Button type="submit" size="icon" disabled={isLoading || (!input.trim() && !selectedImage)}>
                                         <Send className="h-4 w-4" />
                                     </Button>
                                 </form>

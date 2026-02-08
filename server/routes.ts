@@ -1791,7 +1791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Assistant Chat Route (Groq)
   app.post("/api/chat", async (req, res) => {
     try {
-      const { messages } = req.body;
+      const { messages, image } = req.body;
 
       // Fetch popularity data for AI context
       const allLoans = await storage.getAllLoans();
@@ -1811,46 +1811,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter(entry => entry.book)
         .sort((a, b) => b.count - a.count);
 
-      const mostLoaned = sortedBookStats.slice(0, 5).map(s => `"${s.book?.title}" (${s.count} vezes)`).join(", ");
+      const mostLoaned = sortedBookStats.slice(0, 5).map(s => `\"${s.book?.title}\" (${s.count} vezes)`).join(", ");
       const leastLoaned = allBooks
         .filter(b => !bookLoanCount.has(b.id))
         .slice(0, 5)
-        .map(b => `"${b.title}"`)
+        .map(b => `\"${b.title}\"`)
         .join(", ");
 
       const aiContext = `
-        INFORMAÇÕES EM TEMPO REAL DO ACERVO ISPTEC:
-        - Livros Mais Acessados (Top 5): ${mostLoaned}.
-        - Livros Menos Acessados/Novidades: ${leastLoaned}.
-        Total de livros no acervo: ${allBooks.length}.
-        Empréstimos totais realizados: ${allLoans.length}.
-      `;
+      INFORMAÇÕES EM TEMPO REAL DO ACERVO ISPTEC:
+      - Livros Mais Acessados (Top 5): ${mostLoaned}.
+      - Livros Menos Acessados/Novidades: ${leastLoaned}.
+      Total de livros no acervo: ${allBooks.length}.
+      Empréstimos totais realizados: ${allLoans.length}.
+    `;
+
+      let webSearchResults = "";
+      const lastUserMessage = messages[messages.length - 1]?.content || "";
+      const needsWebSearch = /quem é|o que é|lançamento|novidade|últimas notícias|biografia de|história de|sobre o livro|quem escreveu/i.test(lastUserMessage);
+
+      if (needsWebSearch && process.env.TAVILY_API_KEY) {
+        try {
+          const tvRes = await fetch("https://api.tavily.com/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              api_key: process.env.TAVILY_API_KEY,
+              query: lastUserMessage,
+              search_depth: "basic",
+              max_results: 3
+            })
+          });
+          const tvData = await tvRes.json();
+          webSearchResults = tvData.results?.map((r: any) => `- ${r.title}: ${r.content} (${r.url})`).join("\n") || "";
+        } catch (err) {
+          console.error("Tavily Search Error:", err);
+        }
+      }
+
+      const systemPrompt = `Você é o "Mentor Digital da Biblioteca ISPTEC", um assistente virtual super amigável e prestativo.
+    
+    Informações Institucionais Importantes:
+    - Os fundadores deste site/sistema são: Geraldo Abreu e Kialenguluka Tuavile.
+    - O mentor do projeto é o Prof. Judson Paiva.
+    
+    Seu objetivo é:
+    1. Ajudar os alunos e professores a encontrar livros e autores.
+    2. Recomendar livros com base no que é popular ou novo (use os dados abaixo).
+    3. Explicar as regras da biblioteca: alunos 5 dias, professores 15 dias, multas de 500 Kz/dia.
+    4. Se o usuário perguntar por recomendações, baseie-se na lista de mais acessados.
+    5. Se perguntarem sobre os fundadores ou criadores do site, responda com os nomes acima mencionando também o Prof. Judson Paiva como mentor.
+    6. Se houver resultados de pesquisa web abaixo, use-os para dar uma resposta mais completa e atualizada.
+    7. Se uma imagem for enviada, analise-a (ex: capa de livro) e tente relacionar com o acervo isptec.
+
+    DADOS REAIS DO SISTEMA: ${aiContext}
+    ${webSearchResults ? `\nINFORMAÇÕES RECENTES DA INTERNET:\n${webSearchResults}` : ""}
+    
+    Seja amigável e incentive a leitura.`;
+
+      const modelToUse = image ? "llama-3.2-11b-vision-preview" : "llama-3.3-70b-versatile";
+
+      const groqMessages: any[] = [
+        { role: "system", content: systemPrompt }
+      ];
+
+      // Add conversation history
+      messages.forEach((m: any, idx: number) => {
+        if (idx === messages.length - 1 && image) {
+          // Last message with image
+          groqMessages.push({
+            role: m.role,
+            content: [
+              { type: "text", text: m.content },
+              { type: "image_url", image_url: { url: image } }
+            ]
+          });
+        } else {
+          groqMessages.push({ role: m.role, content: m.content });
+        }
+      });
 
       const response = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          {
-            role: "system",
-            content: `Você é o "Mentor Digital da Biblioteca ISPTEC", um assistente virtual super amigável e prestativo.
-            
-            Informações Institucionais Importantes:
-            - Os fundadores deste site/sistema são: Geraldo Abreu e Kialenguluka Tuavile.
-            - O mentor do projeto é o Prof. Judson Paiva.
-            
-            Seu objetivo é:
-            1. Ajudar os alunos e professores a encontrar livros e autores.
-            2. Recomendar livros com base no que é popular ou novo (use os dados abaixo).
-            3. Explicar as regras da biblioteca: alunos 5 dias, professores 15 dias, multas de 500 Kz/dia.
-            4. Se o usuário perguntar por recomendações, baseie-se na lista de mais acessados.
-            5. Se perguntarem sobre os fundadores ou criadores do site, responda com os nomes acima mencionando também o Prof. Judson Paiva como mentor.
-            
-            DADOS REAIS DO SISTEMA: ${aiContext}
-            
-            Seja amigável e incentive a leitura.`
-          },
-          ...messages
-        ],
+        model: modelToUse,
+        messages: groqMessages,
         temperature: 0.7,
+        max_tokens: 1024
       });
 
       res.json({ message: response.choices[0].message.content });
