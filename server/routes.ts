@@ -845,8 +845,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }));
 
-      // Combine both
-      const allFines = [...enrichedPersistentFines, ...virtualFines];
+      // Combine both and filter out virtual fines with 0 amount
+      const allFines = [...enrichedPersistentFines, ...virtualFines].filter(f => parseFloat(f.amount) > 0);
       res.json(allFines);
     } catch (error) {
       console.error("Error in GET /api/fines:", error);
@@ -915,9 +915,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add dynamic fines for active overdue loans to the total pending amount
       let dynamicPendingAmount = 0;
       for (const loan of overdueLoans) {
-        // Only calculate if not already in persistent pending fines (optional check, but safer)
         const fineInfo = calculateFine(new Date(loan.dueDate), new Date());
-        dynamicPendingAmount += fineInfo.amount;
+        if (fineInfo.amount > 0) {
+          dynamicPendingAmount += fineInfo.amount;
+        }
       }
 
       const totalFinesAmount = persistentPendingAmount + dynamicPendingAmount + paidFinesAmount;
