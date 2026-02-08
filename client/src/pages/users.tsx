@@ -30,6 +30,7 @@ type UserWithStats = User & {
   currentLoans: number;
   totalLoansHistory: number;
   fines: number;
+  totalFinesHistory: number;
 };
 
 const userTypeConfig = {
@@ -82,7 +83,7 @@ export default function Users() {
     <div className="flex-1 space-y-6 p-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestão de Utilizadores (v2)</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Gestão de Utilizadores</h1>
           <p className="text-muted-foreground">
             Gerencie os utilizadores da biblioteca e seus acessos
           </p>
@@ -238,6 +239,10 @@ export default function Users() {
                       {Number(user.fines) > 0 ? (
                         <span className="text-destructive font-medium" data-testid={`text-fines-${user.id}`}>
                           {user.fines} Kz
+                        </span>
+                      ) : Number(user.totalFinesHistory) > 0 ? (
+                        <span className="text-muted-foreground text-xs italic" title="Teve multas anteriormente (já liquidado)">
+                          Liquidado ({user.totalFinesHistory} Kz)
                         </span>
                       ) : (
                         <span className="text-muted-foreground">-</span>

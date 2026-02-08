@@ -78,7 +78,7 @@ function BookReviewsDialog({ bookId, open, onOpenChange, bookTitle }: BookReview
                   </div>
                   <span className="text-[10px] text-muted-foreground">{new Date(review.createdAt).toLocaleDateString()}</span>
                 </div>
-                <p className="text-[11px] font-bold text-primary mb-1">{review.userName}</p>
+                <p className="text-xs font-bold text-foreground mb-1">{review.userName}</p>
                 <p className="text-sm italic text-foreground/80">"{review.comment}"</p>
               </div>
             ))

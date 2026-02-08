@@ -77,6 +77,7 @@ export interface IStorage {
   getFinesByUser(userId: string): Promise<Fine[]>;
   createFine(fine: InsertFine): Promise<Fine>;
   updateFine(id: string, fine: Partial<Fine>): Promise<Fine | undefined>;
+  getFinesByLoan(loanId: string): Promise<Fine[]>;
 
   // Loan Request methods
   getLoanRequest(id: string): Promise<LoanRequest | undefined>;
@@ -299,6 +300,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(fines.id, id))
       .returning();
     return updatedFine;
+  }
+
+  async getFinesByLoan(loanId: string): Promise<Fine[]> {
+    return await db.select().from(fines).where(eq(fines.loanId, loanId));
   }
 
   // Loan Request methods

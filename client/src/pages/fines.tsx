@@ -177,15 +177,7 @@ export default function Fines() {
                   <span className="text-lg font-bold">{parseFloat(fine.amount).toLocaleString()} Kz</span>
                 </div>
 
-                {fine.status === "pending" && (
-                  <Button
-                    className="w-full"
-                    onClick={() => payFineMutation.mutate(fine.id)}
-                    disabled={payFineMutation.isPending}
-                  >
-                    {payFineMutation.isPending ? "Processando..." : "Marcar como Pago"}
-                  </Button>
-                )}
+                {/* Action button removed per user request */}
               </Card>
             ))
           )}
@@ -201,7 +193,6 @@ export default function Fines() {
                 <TableHead>Dias de Atraso</TableHead>
                 <TableHead>Valor</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -239,16 +230,7 @@ export default function Fines() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {fine.status === "pending" && (
-                        <Button
-                          size="sm"
-                          onClick={() => payFineMutation.mutate(fine.id)}
-                          disabled={payFineMutation.isPending}
-                          data-testid={`button-mark-paid-${fine.id}`}
-                        >
-                          {payFineMutation.isPending ? "Processando..." : "Marcar como Pago"}
-                        </Button>
-                      )}
+                      {/* Action cell content removed per user request */}
                     </TableCell>
                   </TableRow>
                 ))

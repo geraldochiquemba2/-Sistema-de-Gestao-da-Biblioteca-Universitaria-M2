@@ -197,8 +197,8 @@ export function LoanTable({ loans, onReturn, onRenew, onViewUser }: LoanTablePro
                       </div>
                     </TableCell>
                     <TableCell>
-                      {loan.fine ? (
-                        <span className="text-destructive font-medium" data-testid={`text-fine-${loan.id}`}>
+                      {loan.fine !== undefined && loan.fine !== null ? (
+                        <span className={loan.fine > 0 ? "text-destructive font-medium" : "text-muted-foreground"} data-testid={`text-fine-${loan.id}`}>
                           {loan.fine} Kz
                         </span>
                       ) : (

@@ -129,6 +129,7 @@ export function UserDetailsDialog({ userId, open, onOpenChange }: UserDetailsDia
                                             <TableHead>Livro</TableHead>
                                             <TableHead>Data Empréstimo</TableHead>
                                             <TableHead>Data Prevista</TableHead>
+                                            <TableHead>Multa</TableHead>
                                             <TableHead>Estado</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -150,6 +151,13 @@ export function UserDetailsDialog({ userId, open, onOpenChange }: UserDetailsDia
                                                     </TableCell>
                                                     <TableCell className="whitespace-nowrap">
                                                         {format(new Date(loan.dueDate), "dd/MM/yyyy", { locale: pt })}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {loan.fine ? (
+                                                            <span className="text-destructive font-medium">{loan.fine} Kz</span>
+                                                        ) : (
+                                                            <span className="text-muted-foreground">-</span>
+                                                        )}
                                                     </TableCell>
                                                     <TableCell>
                                                         <Badge variant={loan.status === "active" ? "default" : "secondary"}>

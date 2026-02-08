@@ -98,6 +98,21 @@ function calculateFine(dueDate: Date, returnDate: Date): { amount: number; daysO
   };
 }
 
+async function calculateRemainingFine(loanId: string, dueDate: Date, returnDate: Date): Promise<{ amount: number; daysOverdue: number }> {
+  const fineInfo = calculateFine(dueDate, returnDate);
+  if (fineInfo.amount <= 0) return fineInfo;
+
+  const persistentFines = await storage.getFinesByLoan(loanId);
+  const paidAmount = persistentFines
+    .filter(f => f.status === "paid")
+    .reduce((sum, f) => sum + parseFloat(f.amount), 0);
+
+  return {
+    amount: Math.max(0, fineInfo.amount - paidAmount),
+    daysOverdue: fineInfo.daysOverdue
+  };
+}
+
 async function getUserTotalFines(userId: string): Promise<number> {
   const fines = await storage.getFinesByUser(userId);
   const pendingFines = fines.filter(f => f.status === "pending");
@@ -109,7 +124,7 @@ async function getUserTotalFines(userId: string): Promise<number> {
 
   let dynamicTotal = 0;
   for (const loan of activeOverdueLoans) {
-    const fineInfo = calculateFine(new Date(loan.dueDate), new Date());
+    const fineInfo = await calculateRemainingFine(loan.id, new Date(loan.dueDate), new Date());
     dynamicTotal += fineInfo.amount;
   }
 
@@ -267,6 +282,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const activeLoansCount = loans.filter(l => l.status === "active").length;
         const totalLoansHistory = loans.length;
 
+        const allFines = await storage.getFinesByUser(u.id);
+        const pendingAmount = await getUserTotalFines(u.id);
+        const totalFinesHistory = allFines.reduce((sum, f) => sum + parseFloat(f.amount), 0);
+
         return {
           id: u.id,
           username: u.username,
@@ -277,7 +296,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdAt: u.createdAt,
           currentLoans: activeLoansCount,
           totalLoansHistory: totalLoansHistory,
-          fines: fines
+          fines: pendingAmount,
+          totalFinesHistory: totalFinesHistory
         };
       }));
       res.json(usersWithStats);
@@ -386,12 +406,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enrichedBooks = await Promise.all(books.map(async (book) => {
         const loans = await storage.getLoansByBook(book.id);
         const reviews = await storage.getReviewsByBook(book.id);
-        const fines = await Promise.all(loans.map(async (l) => {
-          const f = await storage.getFine(l.id).catch(() => null);
-          return f ? parseFloat(f.amount as any) : 0;
-        }));
 
-        const totalFines = fines.reduce((sum, val) => sum + val, 0);
+        let totalFines = 0;
+        for (const loan of loans) {
+          // Add persistent fines
+          const persistentFines = await storage.getFinesByLoan(loan.id);
+          totalFines += persistentFines.reduce((sum, f) => sum + parseFloat(f.amount), 0);
+
+          // Add dynamic fine if active and overdue
+          if (loan.status === "active" && new Date(loan.dueDate) < new Date()) {
+            const dynamicFine = await calculateRemainingFine(loan.id, new Date(loan.dueDate), new Date());
+            totalFines += dynamicFine.amount;
+          }
+        }
+
         const avgRating = reviews.length > 0
           ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
           : 0;
@@ -512,13 +540,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const loansWithDetails = await Promise.all(loans.map(async (loan) => {
         const user = await storage.getUser(loan.userId);
         const book = await storage.getBook(loan.bookId);
-        const fine = await storage.getFine(loan.id).catch(() => undefined); // Check if there's a fine linked to this loan
+        const persistentFines = await storage.getFinesByLoan(loan.id);
+        const totalFineAmount = persistentFines.reduce((sum, f) => sum + parseFloat(f.amount), 0);
 
-        let fineAmount = fine ? parseFloat(fine.amount as any) : undefined;
+        let fineAmount: number | undefined = totalFineAmount;
 
         // Dynamic calculation if no persistent fine exists and loan is active + overdue
         if (!fineAmount && loan.status === "active" && new Date(loan.dueDate) < new Date()) {
-          const dynamicFine = calculateFine(new Date(loan.dueDate), new Date());
+          const dynamicFine = await calculateRemainingFine(loan.id, new Date(loan.dueDate), new Date());
           fineAmount = dynamicFine.amount;
         }
 
@@ -546,13 +575,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const loansWithDetails = await Promise.all(loans.map(async (loan) => {
         const book = await storage.getBook(loan.bookId);
-        const fine = await storage.getFine(loan.id).catch(() => undefined);
+        const persistentFines = await storage.getFinesByLoan(loan.id);
+        const totalFineAmount = persistentFines.reduce((sum, f) => sum + parseFloat(f.amount), 0);
 
-        let fineAmount = fine ? parseFloat(fine.amount as any) : undefined;
+        let fineAmount: number | undefined = totalFineAmount;
 
         // Dynamic calculation if no persistent fine exists and loan is active + overdue
         if (!fineAmount && loan.status === "active" && new Date(loan.dueDate) < new Date()) {
-          const dynamicFine = calculateFine(new Date(loan.dueDate), new Date());
+          const dynamicFine = await calculateRemainingFine(loan.id, new Date(loan.dueDate), new Date());
           fineAmount = dynamicFine.amount;
         }
 
@@ -650,7 +680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dueDate = new Date(loan.dueDate);
 
       // Calculate fine if overdue
-      const fineInfo = calculateFine(dueDate, returnDate);
+      const fineInfo = await calculateRemainingFine(loan.id, dueDate, returnDate);
 
       // Update loan
       await storage.updateLoan(loan.id, {
@@ -849,7 +879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const virtualFines = await Promise.all(activeOverdueLoans.map(async (loan) => {
-        const fineInfo = calculateFine(new Date(loan.dueDate), new Date());
+        const fineInfo = await calculateRemainingFine(loan.id, new Date(loan.dueDate), new Date());
         const user = await storage.getUser(loan.userId);
         return {
           id: `virtual-${loan.id}`,
@@ -907,7 +937,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/fines/:id/pay", async (req, res) => {
     try {
-      const fine = await storage.getFine(req.params.id);
+      const id = req.params.id;
+
+      if (id.startsWith("virtual-")) {
+        const loanId = id.replace("virtual-", "");
+        const loan = await storage.getLoan(loanId);
+        if (!loan) {
+          return res.status(404).json({ message: "Empréstimo associado à multa virtual não encontrado" });
+        }
+
+        const fineInfo = await calculateRemainingFine(loan.id, new Date(loan.dueDate), new Date());
+        if (fineInfo.amount <= 0) {
+          return res.status(400).json({ message: "Não há multa pendente para este empréstimo" });
+        }
+
+        await storage.createFine({
+          loanId: loan.id,
+          userId: loan.userId,
+          amount: fineInfo.amount.toString(),
+          daysOverdue: fineInfo.daysOverdue,
+          status: "paid",
+          paymentDate: new Date(),
+        });
+
+        return res.json({ message: "Multa paga com sucesso" });
+      }
+
+      const fine = await storage.getFine(id);
       if (!fine) {
         return res.status(404).json({ message: "Multa não encontrada" });
       }
@@ -946,7 +1002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add dynamic fines for active overdue loans to the total pending amount
       let dynamicPendingAmount = 0;
       for (const loan of overdueLoans) {
-        const fineInfo = calculateFine(new Date(loan.dueDate), new Date());
+        const fineInfo = await calculateRemainingFine(loan.id, new Date(loan.dueDate), new Date());
         if (fineInfo.amount > 0) {
           dynamicPendingAmount += fineInfo.amount;
         }
