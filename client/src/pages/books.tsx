@@ -108,8 +108,8 @@ export default function Books() {
   const [isMagicLoading, setIsMagicLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleMagicFill = async (image?: string) => {
-    if (!magicQuery && !image) return;
+  const handleMagicFill = async (image?: string, images?: string[]) => {
+    if (!magicQuery && !image && !images) return;
 
     setIsMagicLoading(true);
     setSearchResults(null); // Clear previous searches
@@ -117,6 +117,7 @@ export default function Books() {
       const res = await apiRequest("POST", "/api/books/magic-fill", {
         query: magicQuery,
         image,
+        images,
         currentCategories: categories
       });
       const data = await res.json();
@@ -192,42 +193,62 @@ export default function Books() {
   };
 
   const handleMagicImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const img = new Image();
-      img.src = reader.result as string;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1024;
-        const MAX_HEIGHT = 1024;
-        let width = img.width;
-        let height = img.height;
+    setIsMagicLoading(true);
+    try {
+      const compressedImages = await Promise.all(
+        Array.from(files).map((file) => {
+          return new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const img = new Image();
+              img.src = reader.result as string;
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 1024;
+                const MAX_HEIGHT = 1024;
+                let width = img.width;
+                let height = img.height;
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
+                if (width > height) {
+                  if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                  }
+                } else {
+                  if (height > MAX_HEIGHT) {
+                    width *= MAX_HEIGHT / height;
+                    height = MAX_HEIGHT;
+                  }
+                }
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, width, height);
 
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8).split(",")[1];
-        handleMagicFill(compressedBase64);
-      };
-    };
-    reader.readAsDataURL(file);
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8).split(",")[1];
+                resolve(compressedBase64);
+              };
+              img.onerror = () => reject(new Error("Erro ao carregar imagem"));
+            };
+            reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+            reader.readAsDataURL(file);
+          });
+        })
+      );
+      handleMagicFill(undefined, compressedImages);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao processar imagens",
+        description: error.message || "Não foi possível processar as fotos.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsMagicLoading(false);
+    }
   };
 
   const { data: books, isLoading } = useQuery<any[]>({
@@ -417,12 +438,13 @@ export default function Books() {
                     onClick={() => document.getElementById('magic-image-input')?.click()}
                     disabled={isMagicLoading}
                   >
-                    {isMagicLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Camera className="h-4 w-4" /> Capturar Foto da Capa</>}
+                    {isMagicLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Camera className="h-4 w-4" /> Capturar Foto(s) da Capa/Verso</>}
                   </Button>
                   <input
                     id="magic-image-input"
                     type="file"
                     accept="image/*"
+                    multiple
                     className="hidden"
                     onChange={handleMagicImageUpload}
                   />

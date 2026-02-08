@@ -1188,41 +1188,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/books/magic-fill", async (req, res) => {
     try {
-      const { image, query, currentCategories = [] } = req.body;
-      if (!image && !query) {
+      const { image, images, query, currentCategories = [] } = req.body;
+      if (!image && !images && !query) {
         return res.status(400).json({ message: "É necessário uma imagem ou uma descrição do livro." });
       }
 
-      // 1. Process Image with Groq Vision (Returns direct metadata)
-      if (image) {
+      // 1. Process Image(s) with Groq Vision (Returns direct metadata)
+      const imagesToProcess = images || (image ? [image] : []);
+      if (imagesToProcess.length > 0) {
+        const content: any[] = [
+          { type: "text", text: "Analise esta(s) imagem(ns) de capa/contracapa do MESMO livro e retorne consolidados em JSON: title, author, isbn, publisher, yearPublished, description." }
+        ];
+
+        imagesToProcess.forEach((img: string) => {
+          content.push({
+            type: "image_url",
+            image_url: { url: `data:image/jpeg;base64,${img}` }
+          });
+        });
+
         const visionResponse = await groq.chat.completions.create({
           model: "meta-llama/llama-4-scout-17b-16e-instruct",
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "text", text: "Analise esta capa e retorne JSON: title, author, isbn, publisher, yearPublished, description." },
-                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${image}` } }
-              ],
-            },
-          ],
+          messages: [{ role: "user", content }],
           response_format: { type: "json_object" }
         });
         const result = JSON.parse(visionResponse.choices[0].message.content || "{}");
 
-        // Auto-match category even for image
-        if (currentCategories.length > 0) {
+        // Auto-match category
+        if (currentCategories.length > 0 && result.title) {
           const catMatching = await groq.chat.completions.create({
             model: "llama-3.3-70b-versatile",
             messages: [{
               role: "system",
-              content: `Selecione o ID da categoria que melhor se adapta a este livro. Categorias: ${currentCategories.map((c: any) => `"${c.name}" (ID: ${c.id})`).join(", ")}. Retorne apenas o ID.`
+              content: `Selecione o ID da categoria que melhor se adapta a este livro. Categorias: ${currentCategories.map((c: any) => `"${c.name}" (ID: ${c.id})`).join(", ")}. Retorne APENAS o ID.`
             }, {
               role: "user",
               content: `Livro: ${result.title} - ${result.author} (${result.description})`
             }]
           });
-          result.categoryId = catMatching.choices[0].message.content?.trim();
+          const suggestedId = catMatching.choices[0].message.content?.trim();
+          // Verify if it's a valid ID from the list
+          if (currentCategories.some((c: any) => c.id === suggestedId)) {
+            result.categoryId = suggestedId;
+          }
         }
 
         return res.json(result);
