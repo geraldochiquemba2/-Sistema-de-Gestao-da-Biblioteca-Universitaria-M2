@@ -21,6 +21,7 @@ export interface Loan {
   loanDate: Date;
   dueDate: Date;
   status: "active" | "overdue" | "returned";
+  renewalCount: number;
   fine?: number;
 }
 
@@ -83,10 +84,15 @@ export function LoanTable({ loans, onReturn, onRenew, onViewUser }: LoanTablePro
                 </div>
 
                 {loan.status === "active" && (
-                  <div className={`text-sm font-medium ${daysRemaining < 0 ? "text-destructive" : "text-emerald-600"}`}>
-                    {daysRemaining < 0
-                      ? `${Math.abs(daysRemaining)} dias de atraso`
-                      : `${daysRemaining} dias restantes`}
+                  <div className="flex justify-between items-center text-sm font-medium">
+                    <span className={daysRemaining < 0 ? "text-destructive" : "text-emerald-600"}>
+                      {daysRemaining < 0
+                        ? `${Math.abs(daysRemaining)} dias de atraso`
+                        : `${daysRemaining} dias restantes`}
+                    </span>
+                    <span className="text-muted-foreground text-xs font-bold bg-muted px-2 py-0.5 rounded">
+                      Renovações: {loan.renewalCount}/2
+                    </span>
                   </div>
                 )}
 
@@ -141,6 +147,7 @@ export function LoanTable({ loans, onReturn, onRenew, onViewUser }: LoanTablePro
               <TableHead>Data de Empréstimo</TableHead>
               <TableHead>Data de Devolução</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead>Renovações</TableHead>
               <TableHead>Multa</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -183,6 +190,11 @@ export function LoanTable({ loans, onReturn, onRenew, onViewUser }: LoanTablePro
                       <Badge className={statusConfig[loan.status].color} data-testid={`badge-status-${loan.id}`}>
                         {statusConfig[loan.status].text}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-xs font-bold text-muted-foreground bg-muted/50 px-2 py-1 rounded inline-block">
+                        {loan.renewalCount}/2
+                      </div>
                     </TableCell>
                     <TableCell>
                       {loan.fine ? (
