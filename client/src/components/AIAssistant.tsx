@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { BookUser, X, Send, Bot, User, Loader2, Minimize2, Volume2, VolumeX, Settings, Sparkles, AudioLines } from "lucide-react";
+import { BookUser, X, Send, Bot, User, Loader2, Minimize2, Volume2, VolumeX, Settings, Sparkles, AudioLines, Zap, Activity } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -32,6 +32,7 @@ export function AIAssistant() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState<number | null>(null);
     const [voiceMode, setVoiceMode] = useState<"native" | "hd">("hd");
+    const [voiceEnergy, setVoiceEnergy] = useState<"calm" | "balanced" | "energetic">("balanced");
     const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
     const [selectedNativeVoice, setSelectedNativeVoice] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -64,7 +65,7 @@ export function AIAssistant() {
         // Regex robusta para remover emojis e símbolos especiais que o TTS tenta ler
         return text
             .replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, "")
-            .replace(/[😊🚀📚🔊✨⚙️🤖🏆💎✅🎨💡📝🔍📅⏳📌⚠️❌🛑]/g, "") // Emojis comuns
+            .replace(/[😊🚀📚🔊✨⚙️🤖🏆💎✅🎨💡📝🔍📅⏳📌⚠️❌🛑🧤🙌👏👋🤝]/g, "") // Emojis comuns
             .trim();
     };
 
@@ -106,7 +107,18 @@ export function AIAssistant() {
             utterance.lang = "pt-PT";
         }
 
-        utterance.rate = 1.0;
+        // Ajustes de Energia/Personalidade
+        if (voiceEnergy === "energetic") {
+            utterance.rate = 1.15;
+            utterance.pitch = 1.15;
+        } else if (voiceEnergy === "calm") {
+            utterance.rate = 0.85;
+            utterance.pitch = 0.95;
+        } else {
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+        }
+
         utterance.onend = () => setIsSpeaking(null);
         utterance.onerror = () => setIsSpeaking(null);
 
@@ -119,6 +131,16 @@ export function AIAssistant() {
 
         const audio = new Audio(url);
         audioRef.current = audio;
+
+        // Ajuste de Energia em HD (apenas rate, pitch não é suportado nativamente na URL gTTS)
+        if (voiceEnergy === "energetic") {
+            audio.playbackRate = 1.1;
+        } else if (voiceEnergy === "calm") {
+            audio.playbackRate = 0.9;
+        } else {
+            audio.playbackRate = 1.0;
+        }
+
         audio.onended = () => setIsSpeaking(null);
         audio.onerror = () => {
             setIsSpeaking(null);
@@ -204,6 +226,23 @@ export function AIAssistant() {
                                                     <span>Voz HD (Google)</span>
                                                 </div>
                                                 {voiceMode === "hd" && <div className="h-2 w-2 rounded-full bg-primary" />}
+                                            </DropdownMenuItem>
+
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuLabel className="text-[10px] font-normal opacity-50 uppercase tracking-wider">Energia da Voz</DropdownMenuLabel>
+                                            <DropdownMenuItem onClick={() => setVoiceEnergy("energetic")} className="flex items-center justify-between cursor-pointer">
+                                                <div className="flex items-center gap-2">
+                                                    <Zap className="h-4 w-4 text-yellow-500" />
+                                                    <span>Animada (Energética)</span>
+                                                </div>
+                                                {voiceEnergy === "energetic" && <div className="h-2 w-2 rounded-full bg-primary" />}
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => setVoiceEnergy("balanced")} className="flex items-center justify-between cursor-pointer">
+                                                <div className="flex items-center gap-2">
+                                                    <Activity className="h-4 w-4 text-blue-500" />
+                                                    <span>Equilibrada</span>
+                                                </div>
+                                                {voiceEnergy === "balanced" && <div className="h-2 w-2 rounded-full bg-primary" />}
                                             </DropdownMenuItem>
 
                                             <DropdownMenuSeparator />
