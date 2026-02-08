@@ -41,13 +41,38 @@ export function AIAssistant() {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
 
-        // Tentar encontrar uma voz em Português
+        // Sistema Inteligente de Seleção de Voz
         const voices = window.speechSynthesis.getVoices();
-        const ptVoice = voices.find(v => v.lang.startsWith("pt-")) || voices[0];
-        if (ptVoice) utterance.voice = ptVoice;
 
-        utterance.lang = "pt-PT";
+        // Atribuir pontuação para cada voz disponível
+        const ratedVoices = voices
+            .filter(v => v.lang.startsWith("pt-")) // Apenas vozes em Português
+            .map(voice => {
+                let score = 0;
+
+                // Prioridade 1: Sotaque de Portugal (pt-PT) - mais comum em Angola/ISPTEC
+                if (voice.lang === "pt-PT") score += 50;
+
+                // Prioridade 2: Vozes de Alta Qualidade (Google, Microsoft, Naturais)
+                const name = voice.name.toLowerCase();
+                if (name.includes("google") || name.includes("microsoft") || name.includes("natural")) score += 100;
+                if (name.includes("premium") || name.includes("enhanced")) score += 30;
+
+                return { voice, score };
+            })
+            .sort((a, b) => b.score - a.score); // Ordenar pela melhor pontuação
+
+        const bestVoice = ratedVoices.length > 0 ? ratedVoices[0].voice : voices.find(v => v.lang.startsWith("pt-"));
+
+        if (bestVoice) {
+            utterance.voice = bestVoice;
+            utterance.lang = bestVoice.lang;
+        } else {
+            utterance.lang = "pt-PT"; // Fallback de idioma
+        }
+
         utterance.rate = 1.0;
+        utterance.pitch = 1.0;
 
         utterance.onend = () => setIsSpeaking(null);
         utterance.onerror = () => setIsSpeaking(null);
