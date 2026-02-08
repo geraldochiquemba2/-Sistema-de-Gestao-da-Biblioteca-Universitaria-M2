@@ -14,7 +14,13 @@ import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { ReviewList } from "@/components/ReviewList";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Tag } from "lucide-react";
+
+const tagColors = {
+  red: { bg: "bg-red-50 dark:bg-red-900/10", border: "border-red-500", text: "text-red-700 dark:text-red-400", label: "Uso na Biblioteca" },
+  yellow: { bg: "bg-yellow-50 dark:bg-yellow-900/10", border: "border-yellow-500", text: "text-yellow-700 dark:text-yellow-400", label: "1 Dia" },
+  white: { bg: "bg-gray-50 dark:bg-gray-800/10", border: "border-gray-400", text: "text-gray-700 dark:text-gray-300", label: "5 Dias" },
+};
 
 export default function BookSearch() {
   const { user, logout } = useAuth();
@@ -260,12 +266,20 @@ export default function BookSearch() {
               const alreadyReserved = hasActiveReservation(book.id);
 
               return (
-                <Card key={book.id} data-testid={`card-book-${book.id}`}>
+                <Card
+                  key={book.id}
+                  data-testid={`card-book-${book.id}`}
+                  className={`border-2 ${book.tag === 'red' ? 'border-red-500 shadow-red-100/50' :
+                      book.tag === 'yellow' ? 'border-yellow-500 shadow-yellow-100/50' :
+                        'border-gray-200'
+                    } transition-all hover:shadow-md overflow-hidden`}
+                >
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">
                       <CardTitle className="text-lg">{book.title}</CardTitle>
-                      <Badge variant="outline" className="flex-shrink-0">
-                        Etiqueta {getTagLabel(book.tag)}
+                      <Badge variant="outline" className={`${tagColors[book.tag as keyof typeof tagColors].bg} ${tagColors[book.tag as keyof typeof tagColors].text} ${tagColors[book.tag as keyof typeof tagColors].border} border-2 font-bold px-3 py-1 flex-shrink-0`}>
+                        <Tag className="h-3 w-3 mr-1.5" />
+                        {tagColors[book.tag as keyof typeof tagColors].label}
                       </Badge>
                     </div>
                     <CardDescription>{book.author}</CardDescription>

@@ -689,7 +689,14 @@ export default function Books() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {books?.map((book) => (
-            <Card key={book.id} data-testid={`card-book-${book.id}`}>
+            <Card
+              key={book.id}
+              data-testid={`card-book-${book.id}`}
+              className={`border-2 ${book.tag === 'red' ? 'border-red-500 shadow-red-100/50' :
+                  book.tag === 'yellow' ? 'border-yellow-500 shadow-yellow-100/50' :
+                    'border-gray-200'
+                } transition-all hover:shadow-md`}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-lg line-clamp-2">{book.title}</CardTitle>
