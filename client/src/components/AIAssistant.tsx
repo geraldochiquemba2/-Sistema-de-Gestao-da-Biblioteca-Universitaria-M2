@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { BookUser, X, Send, Bot, User, Loader2, Minimize2 } from "lucide-react";
+import { BookUser, X, Send, Bot, User, Loader2, Minimize2, Volume2, VolumeX } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -22,6 +22,7 @@ export function AIAssistant() {
         }
     ]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState<number | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -29,6 +30,31 @@ export function AIAssistant() {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages]);
+
+    const handleSpeak = (text: string, index: number) => {
+        if (isSpeaking === index) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(null);
+            return;
+        }
+
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+
+        // Tentar encontrar uma voz em Português
+        const voices = window.speechSynthesis.getVoices();
+        const ptVoice = voices.find(v => v.lang.startsWith("pt-")) || voices[0];
+        if (ptVoice) utterance.voice = ptVoice;
+
+        utterance.lang = "pt-PT";
+        utterance.rate = 1.0;
+
+        utterance.onend = () => setIsSpeaking(null);
+        utterance.onerror = () => setIsSpeaking(null);
+
+        setIsSpeaking(index);
+        window.speechSynthesis.speak(utterance);
+    };
 
     const handleSend = async () => {
         if (!input.trim() || isLoading) return;
@@ -93,12 +119,22 @@ export function AIAssistant() {
                                                 className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                                             >
                                                 <div
-                                                    className={`max-w-[80%] p-3 rounded-2xl text-sm ${m.role === "user"
+                                                    className={`max-w-[80%] p-3 rounded-2xl text-sm relative group ${m.role === "user"
                                                         ? "bg-primary text-primary-foreground rounded-tr-none"
                                                         : "bg-muted rounded-tl-none"
                                                         }`}
                                                 >
                                                     <p className="leading-relaxed whitespace-pre-wrap">{m.content}</p>
+                                                    {m.role === "assistant" && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className={`h-6 w-6 absolute -right-8 top-1 opacity-0 group-hover:opacity-100 transition-opacity ${isSpeaking === i ? 'opacity-100 text-primary' : 'text-muted-foreground'}`}
+                                                            onClick={() => handleSpeak(m.content, i)}
+                                                        >
+                                                            {isSpeaking === i ? <VolumeX className="h-4 w-4 animate-pulse" /> : <Volume2 className="h-4 w-4" />}
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -141,7 +177,10 @@ export function AIAssistant() {
             <Button
                 size="lg"
                 className={`h-14 w-14 rounded-full shadow-lg transition-transform hover:scale-110 active:scale-95 ${isOpen ? 'rotate-90' : ''}`}
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => {
+                    if (isOpen) window.speechSynthesis.cancel();
+                    setIsOpen(!isOpen);
+                }}
             >
                 {isOpen ? <X className="h-6 w-6" /> : <BookUser className="h-6 w-6" />}
             </Button>
