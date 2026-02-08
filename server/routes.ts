@@ -1686,20 +1686,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { messages } = req.body;
 
+      // Fetch popularity data for AI context
+      const allLoans = await storage.getAllLoans();
+      const allBooks = await storage.getAllBooks();
+
+      const bookLoanCount = new Map<string, number>();
+      allLoans.forEach(loan => {
+        const count = bookLoanCount.get(loan.bookId) || 0;
+        bookLoanCount.set(loan.bookId, count + 1);
+      });
+
+      const sortedBookStats = Array.from(bookLoanCount.entries())
+        .map(([id, count]) => ({
+          book: allBooks.find(b => b.id === id),
+          count
+        }))
+        .filter(entry => entry.book)
+        .sort((a, b) => b.count - a.count);
+
+      const mostLoaned = sortedBookStats.slice(0, 5).map(s => `"${s.book?.title}" (${s.count} vezes)`).join(", ");
+      const leastLoaned = allBooks
+        .filter(b => !bookLoanCount.has(b.id))
+        .slice(0, 5)
+        .map(b => `"${b.title}"`)
+        .join(", ");
+
+      const aiContext = `
+        INFORMAÇÕES EM TEMPO REAL DO ACERVO ISPTEC:
+        - Livros Mais Acessados (Top 5): ${mostLoaned}.
+        - Livros Menos Acessados/Novidades: ${leastLoaned}.
+        Total de livros no acervo: ${allBooks.length}.
+        Empréstimos totais realizados: ${allLoans.length}.
+      `;
+
       const response = await groq.chat.completions.create({
         model: "llama-3.3-70b-versatile",
         messages: [
           {
             role: "system",
-            content: `Você é o "Mentor Digital da Biblioteca ISPTEC", um assistente virtual super amigável, prestativo e conhecedor de tudo sobre livros, literatura e o funcionamento desta biblioteca universitária.
+            content: `Você é o "Mentor Digital da Biblioteca ISPTEC", um assistente virtual super amigável e prestativo.
             
             Seu objetivo é:
             1. Ajudar os alunos e professores a encontrar livros e autores.
-            2. Explicar as regras da biblioteca (empréstimos por 5 dias para alunos, 15 para professores, etiquetas coloridas indicam prazos, multas de 500 Kz/dia).
-            3. Ser extremamente cortês e incentivar a leitura.
-            4. Se não souber algo específico do acervo real do ISPTEC (visto que não tem acesso em tempo real à base em SQL agora), peça para o usuário usar a barra de pesquisa ou contactar um bibliotecário.
+            2. Recomendar livros com base no que é popular ou novo (use os dados abaixo).
+            3. Explicar as regras da biblioteca: alunos 5 dias, professores 15 dias, multas de 500 Kz/dia.
+            4. Se o usuário perguntar por recomendações, baseie-se na lista de mais acessados.
             
-            Fale sempre de forma calorosa e profissional.`
+            DADOS REAIS DO SISTEMA: ${aiContext}
+            
+            Seja amigável e incentive a leitura.`
           },
           ...messages
         ],
