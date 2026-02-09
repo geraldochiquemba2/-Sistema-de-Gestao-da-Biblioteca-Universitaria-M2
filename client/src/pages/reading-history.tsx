@@ -30,7 +30,7 @@ export default function ReadingHistory() {
 
     // Calculate Stats
     const totalBooksRead = loansList.filter((l: any) => l.status === "returned").length;
-    const activeLoans = loansList.filter((l: any) => l.status === "active").length;
+    const activeLoans = loansList.filter((l: any) => l.status === "active" || l.status === "overdue").length;
 
     // Mock gamification/level based on books read
     const getLevel = (count: number) => {
@@ -98,8 +98,8 @@ export default function ReadingHistory() {
                                 <Card key={loan.id} className="p-4 border shadow-none bg-muted/20">
                                     <div className="flex justify-between items-start mb-3">
                                         <div className="font-bold text-lg leading-tight">{loan.book?.title || "Livro Desconhecido"}</div>
-                                        <Badge variant={loan.status === "active" ? "default" : "secondary"}>
-                                            {loan.status === "active" ? "Ativo" : "Devolvido"}
+                                        <Badge variant={loan.status === "active" ? "default" : loan.status === "overdue" ? "destructive" : "secondary"}>
+                                            {loan.status === "active" ? "Ativo" : loan.status === "overdue" ? "Atrasado" : "Devolvido"}
                                         </Badge>
                                     </div>
 
@@ -122,6 +122,12 @@ export default function ReadingHistory() {
                                             </div>
                                         </div>
                                     )}
+                                    {loan.fine > 0 && (
+                                        <div className="mt-2 pt-2 border-t flex justify-between items-center text-sm">
+                                            <span className="text-muted-foreground">Multa:</span>
+                                            <span className="text-destructive font-bold">{Math.round(loan.fine)} Kz</span>
+                                        </div>
+                                    )}
                                 </Card>
                             ))
                         )}
@@ -136,6 +142,7 @@ export default function ReadingHistory() {
                                     <TableHead>Data Empréstimo</TableHead>
                                     <TableHead>Devolução Prevista</TableHead>
                                     <TableHead>Devolvido Em</TableHead>
+                                    <TableHead>Multa</TableHead>
                                     <TableHead>Status</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -158,8 +165,15 @@ export default function ReadingHistory() {
                                                     : "-"}
                                             </TableCell>
                                             <TableCell>
-                                                <Badge variant={loan.status === "active" ? "default" : "secondary"}>
-                                                    {loan.status === "active" ? "Ativo" : "Devolvido"}
+                                                {loan.fine > 0 ? (
+                                                    <span className="text-destructive font-bold">{Math.round(loan.fine)} Kz</span>
+                                                ) : (
+                                                    <span className="text-muted-foreground">-</span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant={loan.status === "active" ? "default" : loan.status === "overdue" ? "destructive" : "secondary"}>
+                                                    {loan.status === "active" ? "Ativo" : loan.status === "overdue" ? "Atrasado" : "Devolvido"}
                                                 </Badge>
                                             </TableCell>
                                         </TableRow>
