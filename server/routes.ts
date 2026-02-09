@@ -713,12 +713,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Check for pending reservations
         const reservations = await storage.getReservationsByBook(loan.bookId);
-        const pendingReservations = reservations
-          .filter(r => r.status === "pending")
-          .sort((a, b) => new Date(a.reservationDate).getTime() - new Date(b.reservationDate).getTime());
+        const pendingReservations = reservations.filter(r => r.status === "pending");
 
         if (pendingReservations.length > 0) {
-          const nextReservation = pendingReservations[0];
+          // Enrich with user details for priority sorting
+          const enrichedReservations = await Promise.all(pendingReservations.map(async (r) => {
+            const user = await storage.getUser(r.userId);
+            return { ...r, userType: user?.userType || "student" };
+          }));
+
+          // Sort: Teachers (priority) -> then by Date
+          enrichedReservations.sort((a, b) => {
+            if (a.userType === "teacher" && b.userType !== "teacher") return -1;
+            if (a.userType !== "teacher" && b.userType === "teacher") return 1;
+            return new Date(a.reservationDate).getTime() - new Date(b.reservationDate).getTime();
+          });
+
+          const nextReservation = enrichedReservations[0];
           const expirationDate = new Date();
           expirationDate.setHours(expirationDate.getHours() + RESERVATION_PICKUP_HOURS);
 
@@ -795,15 +806,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { userId, bookId } = req.query;
       let reservations;
 
+      let reservationsList;
+
       if (userId && typeof userId === "string") {
-        reservations = await storage.getReservationsByUser(userId);
+        reservationsList = await storage.getReservationsByUser(userId);
       } else if (bookId && typeof bookId === "string") {
-        reservations = await storage.getReservationsByBook(bookId);
+        reservationsList = await storage.getReservationsByBook(bookId);
       } else {
-        reservations = await storage.getAllReservations();
+        reservationsList = await storage.getAllReservations();
       }
 
-      res.json(reservations);
+      const reservationsWithDetails = await Promise.all(reservationsList.map(async (resItem: any) => {
+        const user = await storage.getUser(resItem.userId);
+        const book = await storage.getBook(resItem.bookId);
+        return {
+          ...resItem,
+          userName: user?.name || "Desconhecido",
+          userType: user?.userType || "student",
+          bookTitle: book?.title || "Desconhecido"
+        };
+      }));
+
+      // Sort consistently: Notified first -> Teachers -> then Date
+      reservationsWithDetails.sort((a: any, b: any) => {
+        if (a.status !== b.status) {
+          if (a.status === "notified") return -1;
+          if (b.status === "notified") return 1;
+        }
+        if (a.userType === "teacher" && b.userType !== "teacher") return -1;
+        if (a.userType !== "teacher" && b.userType === "teacher") return 1;
+        return new Date(a.reservationDate).getTime() - new Date(b.reservationDate).getTime();
+      });
+
+      res.json(reservationsWithDetails);
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar reservas" });
     }
@@ -827,6 +862,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const book = await storage.getBook(bookId);
       if (!book) {
         return res.status(404).json({ message: "Livro não encontrado" });
+      }
+
+      if (book.tag === "red") {
+        return res.status(400).json({ message: "Este livro não permite reservas (apenas consulta local)" });
       }
 
       // Check if user already has a reservation for this book
@@ -858,6 +897,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(reservation);
     } catch (error) {
       res.status(500).json({ message: "Erro ao atualizar reserva" });
+    }
+  });
+
+  app.delete("/api/reservations/user/:userId/book/:bookId", async (req, res) => {
+    try {
+      const { userId, bookId } = req.params;
+      const success = await storage.deleteReservationByUserAndBook(userId, bookId);
+      if (!success) {
+        return res.status(404).json({ message: "Nenhuma reserva ativa encontrada para este livro" });
+      }
+      res.json({ message: "Reserva cancelada com sucesso" });
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao cancelar reserva" });
     }
   });
 
@@ -1394,6 +1446,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!user) return res.status(404).json({ message: "Utilizador não encontrado" });
       if (!book) return res.status(404).json({ message: "Livro não encontrado" });
+
+      if (book.tag === "red") {
+        return res.status(400).json({ message: "Este livro não pode ser solicitado (apenas consulta local)" });
+      }
 
       // 2. Fetch User's current activity
       const activeLoans = (await storage.getLoansByUser(userId)).filter(l => l.status === "active");

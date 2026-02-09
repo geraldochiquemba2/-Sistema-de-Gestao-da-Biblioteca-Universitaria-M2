@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Search, BookOpen, LogOut, Calendar, MapPin, ArrowLeft } from "lucide-react";
+import { Search, BookOpen, LogOut, Calendar, MapPin, ArrowLeft, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -23,7 +23,7 @@ const tagColors = {
 };
 
 export default function BookSearch() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
@@ -109,29 +109,27 @@ export default function BookSearch() {
 
   if (!user) return null;
 
+  const cancelReservationMutation = useMutation({
+    mutationFn: async (bookId: string) => {
+      if (!user?.id) throw new Error("Usuário não autenticado");
+      await apiRequest("DELETE", `/api/reservations/user/${user.id}/book/${bookId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reservations"] });
+      toast({ title: "Reserva cancelada", description: "Você saiu da lista de espera." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro ao cancelar reserva", description: error.message, variant: "destructive" });
+    },
+  });
+
   const cancelRequestMutation = useMutation({
     mutationFn: async (bookId: string) => {
-      // Find the request ID for this book
       const request = requestsArray.find((r: any) => r.bookId === bookId && r.status === "pending");
-      console.log("Cancelling request for book:", bookId, "Found request:", request);
-
       if (!request) throw new Error("Solicitação não encontrada");
-
       await apiRequest("DELETE", `/api/loan-requests/${request.id}`);
     },
-    onSuccess: (_, bookId) => {
-      console.log("Cancel success, updating cache manually for book:", bookId);
-
-      // Manually remove from cache
-      queryClient.setQueryData(
-        ["/api/loan-requests", { userId: user?.id }],
-        (oldData: any) => {
-          const currentData = Array.isArray(oldData) ? oldData : [];
-          // Filter out the request corresponding to this book
-          return currentData.filter((r: any) => r.bookId !== bookId);
-        }
-      );
-
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/loan-requests"] });
       toast({ title: "Solicitação cancelada", description: "O pedido foi removido." });
     },
@@ -311,46 +309,50 @@ export default function BookSearch() {
                         )}
                       </span>
                     </div>
-                    {book.availableCopies === 0 ? (
-                      <Button
-                        className="w-full"
-                        variant={alreadyReserved ? "outline" : "secondary"}
-                        onClick={() => !alreadyReserved && reserveMutation.mutate(book.id)}
-                        disabled={reserveMutation.isPending || alreadyReserved}
-                      >
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {alreadyReserved ? "Na Lista de Espera" : "Entrar na Lista de Espera"}
-                      </Button>
-                    ) : (
-                      <Button
-                        className="w-full"
-                        variant={hasPendingRequest(book.id) ? "outline" : hasActiveLoan(book.id) ? "ghost" : "default"}
-                        onClick={() => {
-                          if (hasPendingRequest(book.id)) {
-                            cancelRequestMutation.mutate(book.id);
-                          } else if (!hasActiveLoan(book.id)) {
-                            requestLoanMutation.mutate(book.id);
-                          }
-                        }}
-                        disabled={requestLoanMutation.isPending || cancelRequestMutation.isPending || hasActiveLoan(book.id)}
-                      >
-                        {hasPendingRequest(book.id) ? (
-                          <>
-                            <LogOut className="h-4 w-4 mr-2 rotate-180" />
-                            Cancelar Solicitação
-                          </>
+                    {/* Priority logic for buttons */}
+                    {!isAdmin && (
+                      <>
+                        {book.tag === "red" ? (
+                          <div className="flex flex-col items-center p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-md mb-2">
+                            <span className="font-bold text-amber-600 dark:text-amber-400">Consulta Local</span>
+                            <span className="text-xs text-muted-foreground text-center">Este exemplar está disponível apenas para consulta no interior da biblioteca.</span>
+                          </div>
                         ) : hasActiveLoan(book.id) ? (
-                          <div className="flex flex-col items-center">
-                            <span className="font-bold text-green-600">Já reservaste (Empréstimo Ativo)</span>
+                          <div className="flex flex-col items-center p-3 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-md mb-2">
+                            <span className="font-bold text-green-600 dark:text-green-400">Já reservaste (Empréstimo Ativo)</span>
                             <span className="text-xs text-muted-foreground">Devolver até {format(new Date(getActiveLoan(book.id).dueDate), "dd/MM/yyyy", { locale: pt })}</span>
                           </div>
+                        ) : hasPendingRequest(book.id) ? (
+                          <Button
+                            className="w-full"
+                            variant="outline"
+                            onClick={() => cancelRequestMutation.mutate(book.id)}
+                            disabled={cancelRequestMutation.isPending}
+                          >
+                            <LogOut className="h-4 w-4 mr-2 rotate-180" />
+                            Cancelar Solicitação
+                          </Button>
+                        ) : book.availableCopies === 0 ? (
+                          <Button
+                            className="w-full"
+                            variant={alreadyReserved ? "outline" : "secondary"}
+                            onClick={() => alreadyReserved ? cancelReservationMutation.mutate(book.id) : reserveMutation.mutate(book.id)}
+                            disabled={reserveMutation.isPending || cancelReservationMutation.isPending}
+                          >
+                            {alreadyReserved ? <X className="h-4 w-4 mr-2" /> : <Calendar className="h-4 w-4 mr-2" />}
+                            {alreadyReserved ? "Sair da Lista de Espera" : "Entrar na Lista de Espera"}
+                          </Button>
                         ) : (
-                          <>
+                          <Button
+                            className="w-full"
+                            onClick={() => requestLoanMutation.mutate(book.id)}
+                            disabled={requestLoanMutation.isPending}
+                          >
                             <BookOpen className="h-4 w-4 mr-2" />
                             Solicitar Empréstimo
-                          </>
+                          </Button>
                         )}
-                      </Button>
+                      </>
                     )}
                     <Dialog>
                       <DialogTrigger asChild>

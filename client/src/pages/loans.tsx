@@ -64,6 +64,10 @@ export default function Loans() {
     queryKey: ["/api/renewal-requests"],
   });
 
+  const { data: reservations, isLoading: reservationsLoading } = useQuery<any[]>({
+    queryKey: ["/api/reservations"],
+  });
+
   const { data: users } = useQuery<any[]>({
     queryKey: ["/api/users"],
   });
@@ -207,7 +211,7 @@ export default function Loans() {
         loan.bookTitle.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-  const isLoading = loansLoading || requestsLoading;
+  const isLoading = loansLoading || requestsLoading || reservationsLoading;
 
   if (isLoading) {
     return <div className="p-6">Carregando empréstimos...</div>;
@@ -215,19 +219,20 @@ export default function Loans() {
 
   return (
     <div className="flex-1 space-y-6 p-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Gestão de Empréstimos</h1>
           <p className="text-muted-foreground">
             Acompanhe e gerencie os empréstimos e devoluções de livros
           </p>
         </div>
-        <div className="flex gap-2">
-
-
+        <div className="w-full sm:w-auto">
           <Dialog open={isLoanDialogOpen} onOpenChange={setIsLoanDialogOpen}>
             <DialogTrigger asChild>
-              <Button data-testid="button-new-loan">
+              <Button
+                className="w-full bg-amber-100 text-amber-900 border-2 border-amber-200 hover:bg-amber-200 transition-colors h-11"
+                data-testid="button-new-loan"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Empréstimo
               </Button>
@@ -278,7 +283,7 @@ export default function Loans() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {books?.filter(b => b.availableCopies > 0).map((book) => (
+                            {books?.filter(b => b.availableCopies > 0 && b.tag !== "red").map((book) => (
                               <SelectItem key={book.id} value={book.id}>
                                 {book.title} ({book.availableCopies} disponíveis)
                               </SelectItem>
@@ -323,11 +328,11 @@ export default function Loans() {
         </div>
       </div>
 
-      <div className="relative max-w-md">
+      <div className="relative w-full sm:max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Pesquisar por utilizador ou título do livro..."
-          className="pl-9"
+          className="pl-9 h-11"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           data-testid="input-search-loans"
@@ -335,25 +340,55 @@ export default function Loans() {
       </div>
 
       <Tabs defaultValue="active" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="active" data-testid="tab-active-loans">
-            Ativos ({activeLoans.length})
-          </TabsTrigger>
-          <TabsTrigger value="requests" data-testid="tab-pending-requests" className="relative">
-            Solicitações ({pendingRequests.length + pendingRenewals.length})
-            {(pendingRequests.length + pendingRenewals.length) > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-                {pendingRequests.length + pendingRenewals.length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="overdue" data-testid="tab-overdue-loans">
-            Atrasados ({overdueLoans.length})
-          </TabsTrigger>
-          <TabsTrigger value="returned" data-testid="tab-returned-loans">
-            Devolvidos ({returnedLoans.length})
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-1 scrollbar-hide">
+          <TabsList className="w-full sm:w-auto inline-flex h-auto p-1 bg-muted/50">
+            <TabsTrigger
+              value="active"
+              data-testid="tab-active-loans"
+              className="px-4 py-2 text-sm whitespace-nowrap"
+            >
+              Ativos ({activeLoans.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="requests"
+              data-testid="tab-pending-requests"
+              className="relative px-4 py-2 text-sm whitespace-nowrap"
+            >
+              Solicitações ({pendingRequests.length + pendingRenewals.length})
+              {(pendingRequests.length + pendingRenewals.length) > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                  {pendingRequests.length + pendingRenewals.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="overdue"
+              data-testid="tab-overdue-loans"
+              className="px-4 py-2 text-sm whitespace-nowrap"
+            >
+              Atrasados ({overdueLoans.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="returned"
+              data-testid="tab-returned-loans"
+              className="px-4 py-2 text-sm whitespace-nowrap"
+            >
+              Devolvidos ({returnedLoans.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="waiting-list"
+              data-testid="tab-waiting-list"
+              className="relative px-4 py-2 text-sm whitespace-nowrap"
+            >
+              Lista de Espera ({reservations?.length || 0})
+              {reservations && reservations.length > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] text-white">
+                  {reservations.length}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="active" className="space-y-4">
           <LoanTable
@@ -546,6 +581,66 @@ export default function Loans() {
               }
             }}
           />
+        </TabsContent>
+
+        <TabsContent value="waiting-list" className="space-y-4">
+          <div className="rounded-md border bg-card">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="p-3 text-left font-medium">Utilizador</th>
+                    <th className="p-3 text-left font-medium">Livro</th>
+                    <th className="p-3 text-left font-medium">Data da Reserva</th>
+                    <th className="p-3 text-left font-medium">Status</th>
+                    <th className="p-3 text-right font-medium">Prioridade</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {reservations?.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                        Ninguém na lista de espera atualmente
+                      </td>
+                    </tr>
+                  ) : (
+                    reservations?.map((res: any) => (
+                      <tr key={res.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="p-3">
+                          <span className="font-medium text-primary">{res.userName}</span>
+                          <div className="text-xs text-muted-foreground capitalize">{res.userType}</div>
+                        </td>
+                        <td className="p-3">
+                          <span className="font-medium">{res.bookTitle}</span>
+                        </td>
+                        <td className="p-3 text-muted-foreground">
+                          {format(new Date(res.reservationDate), "dd/MM/yyyy HH:mm")}
+                        </td>
+                        <td className="p-3">
+                          {res.status === "notified" ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                              Notificado (Retirada)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                              Em espera
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-right">
+                          {res.userType === "teacher" && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                              ⭐ Prioridade
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 

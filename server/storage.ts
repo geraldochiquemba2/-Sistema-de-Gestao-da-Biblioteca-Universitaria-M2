@@ -102,6 +102,8 @@ export interface IStorage {
   updateReview(id: string, review: Partial<Review>): Promise<Review | undefined>;
   deleteReview(id: string): Promise<boolean>;
   deleteRenewalRequest(id: string): Promise<boolean>;
+  deleteReservation(id: string): Promise<boolean>;
+  deleteReservationByUserAndBook(userId: string, bookId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -272,6 +274,25 @@ export class DatabaseStorage implements IStorage {
       .where(eq(reservations.id, id))
       .returning();
     return updatedReservation;
+  }
+
+  async deleteReservation(id: string): Promise<boolean> {
+    const [deletedReservation] = await db.delete(reservations).where(eq(reservations.id, id)).returning();
+    return !!deletedReservation;
+  }
+
+  async deleteReservationByUserAndBook(userId: string, bookId: string): Promise<boolean> {
+    const [deletedReservation] = await db
+      .delete(reservations)
+      .where(
+        and(
+          eq(reservations.userId, userId),
+          eq(reservations.bookId, bookId),
+          or(eq(reservations.status, "pending"), eq(reservations.status, "notified"))
+        )
+      )
+      .returning();
+    return !!deletedReservation;
   }
 
   // Fine methods
