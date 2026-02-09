@@ -18,6 +18,7 @@ interface Loan {
   dueDate: string;
   status: string;
   renewalCount: number;
+  fine?: number;
 }
 
 interface Book {
@@ -264,9 +265,16 @@ export default function StudentLoans() {
                               </p>
                             )}
                             {overdue && (
-                              <p className="text-xs text-destructive">
-                                {Math.abs(daysUntilDue)} {Math.abs(daysUntilDue) === 1 ? "dia" : "dias"} de atraso
-                              </p>
+                              <div className="flex flex-col gap-1">
+                                <p className="text-xs text-destructive">
+                                  {Math.abs(daysUntilDue)} {Math.abs(daysUntilDue) === 1 ? "dia" : "dias"} de atraso
+                                </p>
+                                {loan.fine !== undefined && loan.fine > 0 && (
+                                  <Badge variant="outline" className="text-destructive border-destructive/20 bg-destructive/5 font-bold w-fit mt-1">
+                                    Multa: {Math.round(loan.fine)} Kz
+                                  </Badge>
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>

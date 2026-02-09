@@ -63,12 +63,18 @@ function normalizeString(str: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-function calculateDueDate(userType: string, bookTag: string): Date {
+function calculateDueDate(userType: string, bookTag: string, baseDate?: Date): Date {
   const now = new Date();
+
+  // For renewals, if the book is not overdue, extend from the original due date.
+  // If it IS overdue, extend from today.
+  // If no baseDate (new loan), use today.
+  const referenceDate = baseDate && baseDate > now ? new Date(baseDate) : now;
+
   let days = 0;
 
   if (bookTag === "red") {
-    return now; // Cannot be loaned
+    return referenceDate; // Cannot be loaned
   }
 
   // Tag overrides user type
@@ -83,8 +89,8 @@ function calculateDueDate(userType: string, bookTag: string): Date {
     }
   }
 
-  now.setDate(now.getDate() + days);
-  return now;
+  referenceDate.setDate(referenceDate.getDate() + days);
+  return referenceDate;
 }
 
 function calculateFine(dueDate: Date, returnDate: Date): { amount: number; daysOverdue: number } {
@@ -120,7 +126,7 @@ async function getUserTotalFines(userId: string): Promise<number> {
 
   // Add dynamic fines from active overdue loans
   const userLoans = await storage.getLoansByUser(userId);
-  const activeOverdueLoans = userLoans.filter(l => l.status === "active" && new Date(l.dueDate) < new Date());
+  const activeOverdueLoans = userLoans.filter(l => (l.status === "active" || l.status === "overdue") && new Date(l.dueDate) < new Date());
 
   let dynamicTotal = 0;
   for (const loan of activeOverdueLoans) {
@@ -152,7 +158,7 @@ async function canUserLoan(userId: string, bookId: string): Promise<{ canLoan: b
 
   // Check if user already has this book active
   const userLoans = await storage.getLoansByUser(userId);
-  const activeLoans = userLoans.filter(l => l.status === "active");
+  const activeLoans = userLoans.filter(l => l.status === "active" || l.status === "overdue");
   const hasThisBookActive = activeLoans.some(l => l.bookId === bookId);
   if (hasThisBookActive) {
     return { canLoan: false, reason: "Você já tem este livro emprestado no momento" };
@@ -787,7 +793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Utilizador ou livro não encontrado" });
       }
 
-      const newDueDate = calculateDueDate(user.userType, book.tag);
+      const newDueDate = calculateDueDate(user.userType, book.tag, new Date(loan.dueDate));
 
       await storage.updateLoan(loan.id, {
         dueDate: newDueDate,
@@ -1710,7 +1716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`Calculating new due date for ${user.userType} and tag ${book.tag}`);
-      const newDueDate = calculateDueDate(user.userType, book.tag);
+      const newDueDate = calculateDueDate(user.userType, book.tag, new Date(loan.dueDate));
 
       await storage.updateLoan(loan.id, {
         dueDate: newDueDate,
