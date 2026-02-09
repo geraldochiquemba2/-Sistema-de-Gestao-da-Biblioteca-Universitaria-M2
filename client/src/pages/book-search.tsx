@@ -144,24 +144,32 @@ export default function BookSearch() {
   const requestsArray = Array.isArray(userLoanRequests) ? userLoanRequests : [];
   const activeLoansArray = Array.isArray(activeLoans) ? activeLoans : [];
 
-  const hasActiveReservation = (bookId: string) => {
+  const hasActiveReservation = (book: any) => {
     return reservationsArray.some(
-      (r: any) => r.bookId === bookId && (r.status === "pending" || r.status === "notified")
+      (r: any) => (r.bookId === book.id || r.bookTitle === book.title) &&
+        (r.status === "pending" || r.status === "notified")
     );
   };
 
-  const hasPendingRequest = (bookId: string) => {
+  const hasPendingRequest = (book: any) => {
     return requestsArray.some(
-      (r: any) => r.bookId === bookId && r.status === "pending"
+      (r: any) => (r.bookId === book.id || r.bookTitle === book.title) &&
+        r.status === "pending"
     );
   };
 
-  const hasActiveLoan = (bookId: string) => {
-    return activeLoansArray.some((l: any) => l.bookId === bookId && l.status === "active");
+  const hasActiveLoan = (book: any) => {
+    return activeLoansArray.some((l: any) =>
+      (l.bookId === book.id || (l.book?.title === book.title && l.book?.author === book.author)) &&
+      (l.status === "active" || l.status === "overdue")
+    );
   };
 
-  const getActiveLoan = (bookId: string) => {
-    return activeLoansArray.find((l: any) => l.bookId === bookId && l.status === "active");
+  const getActiveLoan = (book: any) => {
+    return activeLoansArray.find((l: any) =>
+      (l.bookId === book.id || (l.book?.title === book.title && l.book?.author === book.author)) &&
+      (l.status === "active" || l.status === "overdue")
+    );
   };
 
   const getDepartmentLabel = (dept: string) => {
@@ -265,7 +273,7 @@ export default function BookSearch() {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {booksArray.map((book: any) => {
               const category = categoriesArray.find((c: any) => c.id === book.categoryId);
-              const alreadyReserved = hasActiveReservation(book.id);
+              const alreadyReserved = hasActiveReservation(book);
 
               return (
                 <Card
@@ -317,12 +325,12 @@ export default function BookSearch() {
                             <span className="font-bold text-amber-600 dark:text-amber-400">Consulta Local</span>
                             <span className="text-xs text-muted-foreground text-center">Este exemplar está disponível apenas para consulta no interior da biblioteca.</span>
                           </div>
-                        ) : hasActiveLoan(book.id) ? (
+                        ) : hasActiveLoan(book) ? (
                           <div className="flex flex-col items-center p-3 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-md mb-2">
                             <span className="font-bold text-green-600 dark:text-green-400">Já reservaste (Empréstimo Ativo)</span>
-                            <span className="text-xs text-muted-foreground">Devolver até {format(new Date(getActiveLoan(book.id).dueDate), "dd/MM/yyyy", { locale: pt })}</span>
+                            <span className="text-xs text-muted-foreground">Devolver até {format(new Date(getActiveLoan(book).dueDate), "dd/MM/yyyy", { locale: pt })}</span>
                           </div>
-                        ) : hasPendingRequest(book.id) ? (
+                        ) : hasPendingRequest(book) ? (
                           <Button
                             className="w-full"
                             variant="outline"

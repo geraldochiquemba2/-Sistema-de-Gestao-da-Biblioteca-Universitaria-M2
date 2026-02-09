@@ -1430,7 +1430,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requests = await storage.getAllLoanRequests();
       }
 
-      res.json(requests);
+      const enrichedRequests = await Promise.all(requests.map(async (req) => {
+        const book = await storage.getBook(req.bookId);
+        return {
+          ...req,
+          bookTitle: book?.title,
+          bookAuthor: book?.author
+        };
+      }));
+
+      res.json(enrichedRequests);
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar solicitações" });
     }

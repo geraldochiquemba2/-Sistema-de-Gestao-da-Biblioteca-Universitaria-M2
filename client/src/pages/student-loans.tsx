@@ -119,7 +119,7 @@ export default function StudentLoans() {
     return null;
   }
 
-  const activeLoans = (loans || []).filter((l) => l.status === "active");
+  const activeLoans = (loans || []).filter((l) => l.status === "active" || l.status === "overdue");
   const pendingRequests = Array.isArray(loanRequests) ? loanRequests : [];
   const pendingRenewals = Array.isArray(renewalRequests) ? renewalRequests : [];
 
