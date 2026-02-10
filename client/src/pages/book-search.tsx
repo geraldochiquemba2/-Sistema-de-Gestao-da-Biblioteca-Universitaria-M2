@@ -343,12 +343,12 @@ export default function BookSearch() {
                         ) : book.availableCopies === 0 ? (
                           <Button
                             className="w-full"
-                            variant={alreadyReserved ? "outline" : "secondary"}
+                            variant={alreadyReserved ? "destructive" : "secondary"}
                             onClick={() => alreadyReserved ? cancelReservationMutation.mutate(book.id) : reserveMutation.mutate(book.id)}
                             disabled={reserveMutation.isPending || cancelReservationMutation.isPending}
                           >
                             {alreadyReserved ? <X className="h-4 w-4 mr-2" /> : <Calendar className="h-4 w-4 mr-2" />}
-                            {alreadyReserved ? "Sair da Lista de Espera" : "Entrar na Lista de Espera"}
+                            {alreadyReserved ? "Cancelar Reserva" : "Entrar na Lista de Espera"}
                           </Button>
                         ) : (
                           <Button
