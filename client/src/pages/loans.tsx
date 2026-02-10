@@ -208,6 +208,7 @@ export default function Loans() {
     loansToFilter.filter(
       (loan) =>
         loan.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (loan as any).userEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         loan.bookTitle.toLowerCase().includes(searchQuery.toLowerCase())
     );
 

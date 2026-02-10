@@ -564,6 +564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return {
           ...loan,
           userName: user?.name || "Desconhecido",
+          userEmail: user?.email || "",
           userType: user?.userType || "student",
           bookTitle: book?.title || "Desconhecido",
           fine: fineAmount
@@ -828,6 +829,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return {
           ...resItem,
           userName: user?.name || "Desconhecido",
+          userEmail: user?.email || "",
           userType: user?.userType || "student",
           bookTitle: book?.title || "Desconhecido"
         };
