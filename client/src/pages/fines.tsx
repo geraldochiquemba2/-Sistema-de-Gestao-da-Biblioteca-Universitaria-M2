@@ -177,7 +177,16 @@ export default function Fines() {
                   <span className="text-lg font-bold">{parseFloat(fine.amount).toLocaleString()} Kz</span>
                 </div>
 
-                {/* Action button removed per user request */}
+                {fine.status === "pending" && (
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => payFineMutation.mutate(fine.id)}
+                    disabled={payFineMutation.isPending}
+                  >
+                    {payFineMutation.isPending ? "Processando..." : "Liquidar"}
+                  </Button>
+                )}
               </Card>
             ))
           )}
@@ -193,6 +202,7 @@ export default function Fines() {
                 <TableHead>Dias de Atraso</TableHead>
                 <TableHead>Valor</TableHead>
                 <TableHead>Estado</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -212,7 +222,7 @@ export default function Fines() {
                 filteredFines.map((fine) => (
                   <TableRow key={fine.id} data-testid={`row-fine-${fine.id}`}>
                     <TableCell>
-                      <div className="font-medium" data-testid={`text-user-${fine.id}`}>{fine.userName || fine.userId}</div>
+                      <div className="font-semibold text-foreground" data-testid={`text-user-${fine.id}`}>{fine.userName || fine.userId}</div>
                       <div className="text-xs text-muted-foreground">{fine.userEmail}</div>
                     </TableCell>
                     <TableCell data-testid={`text-loan-${fine.id}`}>{fine.loanId}</TableCell>
@@ -230,7 +240,16 @@ export default function Fines() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {/* Action cell content removed per user request */}
+                      {fine.status === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => payFineMutation.mutate(fine.id)}
+                          disabled={payFineMutation.isPending}
+                        >
+                          {payFineMutation.isPending ? "Processando..." : "Liquidar"}
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
