@@ -340,7 +340,7 @@ export default function Loans() {
       </div>
 
       <Tabs defaultValue="active" className="space-y-4">
-        <div className="w-full overflow-x-auto pb-1 scrollbar-hide">
+        <div className="w-full overflow-x-auto pb-1">
           <TabsList className="w-full sm:w-auto inline-flex h-auto p-1 bg-muted/50">
             <TabsTrigger
               value="active"
@@ -348,6 +348,18 @@ export default function Loans() {
               className="px-4 py-2 text-sm whitespace-nowrap"
             >
               Ativos ({activeLoans.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="waiting-list"
+              data-testid="tab-waiting-list"
+              className="relative px-4 py-2 text-sm whitespace-nowrap"
+            >
+              Lista de Espera ({reservations?.length || 0})
+              {reservations && reservations.length > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] text-white">
+                  {reservations.length}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger
               value="requests"
@@ -374,18 +386,6 @@ export default function Loans() {
               className="px-4 py-2 text-sm whitespace-nowrap"
             >
               Devolvidos ({returnedLoans.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="waiting-list"
-              data-testid="tab-waiting-list"
-              className="relative px-4 py-2 text-sm whitespace-nowrap"
-            >
-              Lista de Espera ({reservations?.length || 0})
-              {reservations && reservations.length > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] text-white">
-                  {reservations.length}
-                </span>
-              )}
             </TabsTrigger>
           </TabsList>
         </div>
