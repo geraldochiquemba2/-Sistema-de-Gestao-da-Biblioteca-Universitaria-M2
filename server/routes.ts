@@ -853,8 +853,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/reservations", async (req, res) => {
     try {
       const { userId, bookId } = req.body;
+      console.log(`[Reservation] Attempting to create reservation for User ${userId} and Book ${bookId}`);
 
-      // Check reservation limit - only count pending and notified
+      // 1. Check reservation limit - only count pending and notified
       const userReservations = await storage.getReservationsByUser(userId);
       const activeReservations = userReservations.filter(r =>
         r.status === "pending" || r.status === "notified"
@@ -864,7 +865,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: `Limite de ${MAX_RESERVATIONS_PER_USER} reservas simultâneas atingido` });
       }
 
-      // Check if book exists
+      // 2. Check if book exists
       const book = await storage.getBook(bookId);
       if (!book) {
         return res.status(404).json({ message: "Livro não encontrado" });
@@ -874,22 +875,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Este livro não permite reservas (apenas consulta local)" });
       }
 
-      // Check if user already has a reservation for this book
-      const hasReservation = userReservations.some(r =>
-        r.bookId === bookId && (r.status === "pending" || r.status === "notified")
-      );
+      // 3. ROBUST CHECK: Prevent Hoarding (User already has this book loaned?)
+      // Fetch active loans
+      const userLoans = await storage.getLoansByUser(userId);
+      const activeLoans = userLoans.filter(l => l.status === "active" || l.status === "overdue");
 
-      if (hasReservation) {
-        return res.status(400).json({ message: "Você já tem uma reserva ativa para este livro" });
+      for (const loan of activeLoans) {
+        const loanBook = await storage.getBook(loan.bookId);
+        if (loanBook && normalizeString(loanBook.title) === normalizeString(book.title)) {
+          console.log(`[Reservation] Blocked: User already has active loan for '${loanBook.title}' (Loan ID: ${loan.id})`);
+          return res.status(400).json({
+            message: `Você já possui um exemplar do livro '${book.title}' emprestado.`
+          });
+        }
       }
 
+      // 4. ROBUST CHECK: Prevent Duplicate Reservations (User already reserved this title?)
+      // Check active reservations (pending/notified) for SAME TITLE (not just same ID)
+      for (const resv of activeReservations) {
+        const resBook = await storage.getBook(resv.bookId);
+        if (resBook && normalizeString(resBook.title) === normalizeString(book.title)) {
+          console.log(`[Reservation] Blocked: User already has pending reservation for '${resBook.title}' (Res ID: ${resv.id})`);
+
+          const statusMessage = resv.status === "notified"
+            ? "Você já tem uma reserva disponível para levantamento para este livro."
+            : "Você já está na lista de espera para este livro.";
+
+          return res.status(400).json({
+            message: statusMessage
+          });
+        }
+      }
+
+      // 5. Create Reservation
       const reservation = await storage.createReservation({
         userId,
         bookId,
       });
 
+      console.log(`[Reservation] Success: Created reservation ${reservation.id}`);
       res.status(201).json(reservation);
     } catch (error: any) {
+      console.error("[Reservation] Error:", error);
       res.status(400).json({ message: error.message || "Erro ao criar reserva" });
     }
   });
