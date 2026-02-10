@@ -591,7 +591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let fineAmount: number | undefined = totalFineAmount;
 
         // Dynamic calculation if no persistent fine exists and loan is active + overdue
-        if (!fineAmount && loan.status === "active" && new Date(loan.dueDate) < new Date()) {
+        if (!fineAmount && (loan.status === "active" || loan.status === "overdue") && new Date(loan.dueDate) < new Date()) {
           const dynamicFine = await calculateRemainingFine(loan.id, new Date(loan.dueDate), new Date());
           fineAmount = dynamicFine.amount;
         }
