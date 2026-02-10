@@ -433,7 +433,7 @@ export default function Loans() {
                         return (
                           <tr key={req.id} className="hover:bg-muted/30 transition-colors">
                             <td className="p-3">
-                              <span className="font-medium text-primary">{user?.name || "..."}</span>
+                              <span className="font-semibold text-foreground">{user?.name || "..."}</span>
                               <div className="text-xs text-muted-foreground capitalize">{user?.userType}</div>
                             </td>
                             <td className="p-3">
@@ -501,7 +501,7 @@ export default function Loans() {
                         return (
                           <tr key={req.id} className="hover:bg-muted/30 transition-colors">
                             <td className="p-3">
-                              <span className="font-medium text-primary">{user?.name || "..."}</span>
+                              <span className="font-semibold text-foreground">{user?.name || "..."}</span>
                               <div className="text-xs text-muted-foreground capitalize">{user?.userType}</div>
                             </td>
                             <td className="p-3">
@@ -607,7 +607,7 @@ export default function Loans() {
                     reservations?.map((res: any) => (
                       <tr key={res.id} className="hover:bg-muted/30 transition-colors">
                         <td className="p-3">
-                          <span className="font-medium text-primary">{res.userName}</span>
+                          <span className="font-semibold text-foreground">{res.userName}</span>
                           <div className="text-xs text-muted-foreground capitalize">{res.userType}</div>
                         </td>
                         <td className="p-3">
