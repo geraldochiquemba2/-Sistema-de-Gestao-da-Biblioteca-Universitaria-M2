@@ -213,7 +213,7 @@ export default function Reports() {
             <div className="space-y-4">
               {topUsers.map((user, index) => (
                 <div key={index} className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold flex-shrink-0">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-foreground font-bold flex-shrink-0">
                     {index + 1}
                   </div>
                   <div className="flex-1 min-w-0">

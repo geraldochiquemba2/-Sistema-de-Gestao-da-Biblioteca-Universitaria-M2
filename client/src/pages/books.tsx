@@ -400,7 +400,7 @@ export default function Books() {
                     <Sparkles className="h-5 w-5 text-primary animate-pulse" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-primary">Preenchimento Mágico (IA + Web)</h4>
+                    <h4 className="text-sm font-bold text-foreground">Preenchimento Mágico (IA + Web)</h4>
                     <p className="text-[11px] text-muted-foreground">Tire uma foto ou descreva o livro para preencher tudo automaticamente.</p>
                   </div>
                 </div>
@@ -434,7 +434,7 @@ export default function Books() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full gap-2 border-primary/20 hover:bg-primary/10 text-primary"
+                    className="w-full gap-2 border-primary/20 hover:bg-primary/10 text-foreground font-semibold"
                     onClick={() => document.getElementById('magic-image-input')?.click()}
                     disabled={isMagicLoading}
                   >

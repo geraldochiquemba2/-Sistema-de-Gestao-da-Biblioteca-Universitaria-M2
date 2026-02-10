@@ -231,7 +231,7 @@ export default function Users() {
                       </div>
                     </TableCell>
                     <TableCell data-testid={`text-loans-${user.id}`}>
-                      <span className="font-medium text-primary">{user.currentLoans}</span>
+                      <span className="font-semibold text-foreground">{user.currentLoans}</span>
                       <span className="text-muted-foreground mx-1">/</span>
                       <span className="text-muted-foreground text-xs">{user.totalLoansHistory} total</span>
                     </TableCell>

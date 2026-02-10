@@ -85,7 +85,7 @@ export default function Dashboard() {
               {popularBooks && popularBooks.length > 0 ? (
                 popularBooks.map((item, index) => (
                   <div key={index} className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary font-bold flex-shrink-0">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-foreground font-bold flex-shrink-0">
                       {index + 1}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -122,7 +122,7 @@ export default function Dashboard() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Exemplares Disponíveis</span>
-                <span className="text-xl font-semibold text-primary">{stats?.totalAvailableCopies || 0}</span>
+                <span className="text-xl font-semibold text-foreground">{stats?.totalAvailableCopies || 0}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Empréstimos Atrasados</span>
@@ -130,7 +130,7 @@ export default function Dashboard() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Taxa de Utilização</span>
-                <span className="text-2xl font-bold text-primary">
+                <span className="text-2xl font-bold text-foreground">
                   {stats?.totalCopies ?
                     Math.round((stats.activeLoans / stats.totalCopies) * 100) : 0}%
                 </span>

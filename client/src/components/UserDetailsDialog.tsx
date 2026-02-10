@@ -68,7 +68,7 @@ export function UserDetailsDialog({ userId, open, onOpenChange }: UserDetailsDia
                 ) : userData ? (
                     <div className="space-y-6 flex-1 overflow-hidden flex flex-col">
                         <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
-                            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary">
+                            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-foreground">
                                 {userData.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
@@ -89,7 +89,7 @@ export function UserDetailsDialog({ userId, open, onOpenChange }: UserDetailsDia
                             <Card className="bg-primary/5 border-primary/10">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-xs font-medium uppercase text-muted-foreground">Livros Lidos</CardTitle>
-                                    <BookOpen className="h-4 w-4 text-primary" />
+                                    <BookOpen className="h-4 w-4 text-foreground" />
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-2xl font-bold">{totalBooksRead}</div>
