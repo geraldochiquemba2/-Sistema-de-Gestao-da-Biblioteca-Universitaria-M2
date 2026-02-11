@@ -6,7 +6,6 @@ import { BookOpen, Calendar, AlertCircle, Search, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { differenceInDays, differenceInHours, differenceInMinutes, isPast } from "date-fns";
 import { useEffect, useState } from "react";
-import { NotificationSettings } from "@/components/NotificationSettings";
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -170,8 +169,7 @@ export default function StudentDashboard() {
               </Card>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 mb-8">
-              <NotificationSettings />
+            <div className="grid gap-6 md:grid-cols-1 mb-8">
 
               <Card>
                 <CardHeader>

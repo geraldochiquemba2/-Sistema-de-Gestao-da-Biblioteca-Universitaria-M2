@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { BookOpen, Calendar, AlertCircle, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { NotificationSettings } from "@/components/NotificationSettings";
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
@@ -121,8 +120,7 @@ export default function TeacherDashboard() {
               </Card>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 mb-8">
-              <NotificationSettings />
+            <div className="grid gap-6 md:grid-cols-1 mb-8">
 
               <Card>
                 <CardHeader>
