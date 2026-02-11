@@ -2,11 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Calendar, AlertCircle, LogOut, Search } from "lucide-react";
+import { BookOpen, Calendar, AlertCircle, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { NotificationSettings } from "@/components/NotificationSettings";
 
 export default function TeacherDashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
 
   const { data: loans, isLoading: loansLoading } = useQuery({
@@ -120,31 +121,35 @@ export default function TeacherDashboard() {
               </Card>
             </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Regras de Empréstimo para Docentes</CardTitle>
-                <CardDescription>Informações importantes sobre seus empréstimos</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Limites:</h3>
-                  <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                    <li>Máximo de 4 livros simultâneos</li>
-                    <li>Prazo de 15 dias para livros com etiqueta cor branca</li>
-                    <li>Livros com etiqueta cor amarela: apenas 1 dia</li>
-                    <li>Livros com etiqueta cor vermelha: uso exclusivo na biblioteca</li>
-                  </ul>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Restrições:</h3>
-                  <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                    <li>Apenas 1 obra por título (não pode ter exemplares duplicados do mesmo título)</li>
-                    <li>Multas acima de 2000 Kz bloqueiam novos empréstimos</li>
-                    <li>Multa de 500 Kz por dia de atraso</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid gap-6 md:grid-cols-2 mb-8">
+              <NotificationSettings />
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Regras de Empréstimo para Docentes</CardTitle>
+                  <CardDescription>Informações importantes sobre seus empréstimos</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold mb-2">Limites:</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                      <li>Máximo de 4 livros simultâneos</li>
+                      <li>Prazo de 15 dias para livros com etiqueta cor branca</li>
+                      <li>Livros com etiqueta cor amarela: apenas 1 dia</li>
+                      <li>Livros com etiqueta cor vermelha: uso exclusivo na biblioteca</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-2">Restrições:</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                      <li>Apenas 1 obra por título (não pode ter exemplares duplicados do mesmo título)</li>
+                      <li>Multas acima de 2000 Kz bloqueiam novos empréstimos</li>
+                      <li>Multa de 500 Kz por dia de atraso</li>
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </>
         )}
       </main>

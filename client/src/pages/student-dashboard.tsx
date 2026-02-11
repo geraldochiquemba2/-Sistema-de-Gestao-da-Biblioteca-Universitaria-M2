@@ -2,18 +2,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import { BookOpen, Calendar, AlertCircle, LogOut, Search, Clock, Settings, Save } from "lucide-react";
+import { BookOpen, Calendar, AlertCircle, Search, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { differenceInDays, differenceInHours, differenceInMinutes, isPast } from "date-fns";
 import { useEffect, useState } from "react";
-import { apiRequest } from "@/lib/queryClient";
+import { NotificationSettings } from "@/components/NotificationSettings";
 
 export default function StudentDashboard() {
-  const { user, updateUser, logout } = useAuth();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
 
   const { data: loans, isLoading: loansLoading } = useQuery({
@@ -31,69 +27,20 @@ export default function StudentDashboard() {
     enabled: !!user?.id,
   });
 
-  if (!user) {
-    return null;
-  }
-
-  const loansArray = Array.isArray(loans) ? loans : [];
-  const finesArray = Array.isArray(fines) ? fines : [];
-  const activeLoans = loansArray.filter((l: any) => l.status === "active");
-  const pendingFines = finesArray.filter((f: any) => f.status === "pending");
-  const totalFines = pendingFines.reduce((sum: number, f: any) => sum + parseFloat(f.amount), 0);
-
-  const isLoading = loansLoading || finesLoading;
-
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || "");
-  const [smsEnabled, setSmsEnabled] = useState(user?.smsNotifications || false);
-
-  // Update local state when user data changes/loads
-  useEffect(() => {
-    if (user) {
-      setPhoneNumber(user.phoneNumber || "");
-      setSmsEnabled(user.smsNotifications || false);
-    }
-  }, [user]);
-
-  const updateSettingsMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("PATCH", `/api/users/${user?.id}`, {
-        phoneNumber,
-        smsNotifications: smsEnabled
-      });
-      return res.json();
-    },
-    onSuccess: (updatedUser: any) => {
-      toast({
-        title: "Sucesso",
-        description: "Configurações de notificação atualizadas com sucesso.",
-      });
-      updateUser(updatedUser);
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro",
-        description: error.message || "Falha ao atualizar configurações.",
-        variant: "destructive"
-      });
-    }
-  });
-
   const [timeLeft, setTimeLeft] = useState<string>("");
-
-  const getNextDueDate = () => {
-    if (activeLoans.length === 0) return null;
-    const sorted = activeLoans.sort((a: any, b: any) =>
-      new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-    );
-    return sorted[0]?.dueDate;
-  };
 
   useEffect(() => {
     const updateTimer = () => {
-      const nextDue = getNextDueDate();
+      if (!activeLoans || activeLoans.length === 0) {
+        setTimeLeft("Sem empréstimos");
+        return;
+      }
+
+      const sorted = [...activeLoans].sort((a: any, b: any) =>
+        new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+      );
+      const nextDue = sorted[0]?.dueDate;
+
       if (!nextDue) {
         setTimeLeft("Sem empréstimos");
         return;
@@ -123,7 +70,19 @@ export default function StudentDashboard() {
     updateTimer();
     const interval = setInterval(updateTimer, 60000);
     return () => clearInterval(interval);
-  }, [activeLoans]);
+  }, [loans]);
+
+  if (!user) {
+    return null;
+  }
+
+  const loansArray = Array.isArray(loans) ? loans : [];
+  const finesArray = Array.isArray(fines) ? fines : [];
+  const activeLoans = loansArray.filter((l: any) => l.status === "active");
+  const pendingFines = finesArray.filter((f: any) => f.status === "pending");
+  const totalFines = pendingFines.reduce((sum: number, f: any) => sum + parseFloat(f.amount), 0);
+
+  const isLoading = loansLoading || finesLoading;
 
   return (
     <div className="min-h-screen bg-background">
@@ -212,62 +171,7 @@ export default function StudentDashboard() {
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 mb-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="h-5 w-5" />
-                    Configurações de Notificação
-                  </CardTitle>
-                  <CardDescription>
-                    Receba alertas sobre devoluções e multas via SMS
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Número de Telefone (Angola)</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="phone"
-                        placeholder="923 000 000"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Insira um número válido (ex: 923 123 456).
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between space-x-2">
-                    <Label htmlFor="sms-alerts" className="flex flex-col space-y-1">
-                      <span>Alertas por SMS</span>
-                      <span className="font-normal text-xs text-muted-foreground">
-                        Receba avisos quando o prazo estiver acabando
-                      </span>
-                    </Label>
-                    <Switch
-                      id="sms-alerts"
-                      checked={smsEnabled}
-                      onCheckedChange={setSmsEnabled}
-                    />
-                  </div>
-
-                  <Button
-                    onClick={() => updateSettingsMutation.mutate()}
-                    disabled={updateSettingsMutation.isPending}
-                    className="w-full"
-                  >
-                    {updateSettingsMutation.isPending ? (
-                      "Salvando..."
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        Salvar Configurações
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
+              <NotificationSettings />
 
               <Card>
                 <CardHeader>
