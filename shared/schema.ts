@@ -21,6 +21,8 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   userType: userTypeEnum("user_type").notNull().default("student"),
   isActive: boolean("is_active").notNull().default(true),
+  phoneNumber: text("phone_number"),
+  smsNotifications: boolean("sms_notifications").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

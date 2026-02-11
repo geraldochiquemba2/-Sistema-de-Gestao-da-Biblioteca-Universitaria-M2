@@ -5,6 +5,7 @@ import { insertBookSchema, insertUserSchema, insertLoanSchema, insertReservation
 import OpenAI from "openai";
 import { createWorker } from "tesseract.js";
 import { sendLoanConfirmation, sendRenewalRequestAlert, sendRenewalDecision } from "./email";
+import { sendSMS } from "./sms";
 import { z } from "zod";
 
 // Initialize OpenAI only if API key is present
@@ -356,7 +357,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/users/:id", async (req, res) => {
     try {
-      const user = await storage.updateUser(req.params.id, req.body);
+      const { phoneNumber, smsNotifications, ...otherUpdates } = req.body;
+
+      // Validation for Angolan phone number if provided
+      if (phoneNumber) {
+        // Remove spaces and dashes
+        const cleanPhone = phoneNumber.replace(/[\s-]/g, '');
+        // Check if it matches +2449... or 9... format
+        const isAngolan = /^(?:\+244)?9\d{8}$/.test(cleanPhone);
+        if (!isAngolan) {
+          return res.status(400).json({ message: "Número de telefone inválido. Deve ser um número angolano (ex: 923456789)." });
+        }
+      }
+
+      const user = await storage.updateUser(req.params.id, {
+        ...otherUpdates,
+        phoneNumber,
+        smsNotifications
+      });
+
       if (!user) {
         return res.status(404).json({ message: "Utilizador não encontrado" });
       }
@@ -745,6 +764,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             notificationDate: new Date(),
             expirationDate,
           });
+
+          // Send SMS notification to the user next in line
+          try {
+            // We need to fetch the user again or rely on enriched data
+            // enrichedReservations has userType, but maybe not phone.
+            // Let's fetch the full user object to be safe.
+            const notifiedUser = await storage.getUser(nextReservation.userId);
+            if (notifiedUser && notifiedUser.phoneNumber && notifiedUser.smsNotifications) {
+              const message = `Biblioteca ISPTEC: O livro "${book.title}" já está disponível para levantamento. Você tem 48h.`;
+              await sendSMS(notifiedUser.phoneNumber, message);
+            }
+          } catch (smsError) {
+            console.error("Failed to send waitlist SMS:", smsError);
+          }
         }
       }
 
@@ -916,6 +949,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       console.log(`[Reservation] Success: Created reservation ${reservation.id}`);
+
+      // Send SMS notification
+      try {
+        const user = await storage.getUser(userId);
+        if (user && user.phoneNumber && user.smsNotifications) {
+          const message = `Biblioteca ISPTEC: Reserva confirmada para "${book.title}". Você será avisado quando o livro estiver disponível.`;
+          await sendSMS(user.phoneNumber, message);
+        }
+      } catch (smsError) {
+        console.error("Failed to send reservation SMS:", smsError);
+      }
+
       res.status(201).json(reservation);
     } catch (error: any) {
       console.error("[Reservation] Error:", error);
@@ -1580,6 +1625,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reviewDate: new Date(),
       });
 
+      // Send SMS notification
+      try {
+        if (user.phoneNumber && user.smsNotifications) {
+          const formattedDate = new Date(dueDate).toLocaleDateString("pt-BR");
+          const message = `Biblioteca ISPTEC: Seu pedido de empréstimo para "${book.title}" foi aprovado. Devolução até ${formattedDate}.`;
+          await sendSMS(user.phoneNumber, message);
+        }
+      } catch (smsError) {
+        console.error("Failed to send approval SMS:", smsError);
+      }
+
       res.json(loan);
     } catch (error: any) {
       res.status(400).json({ message: error.message || "Erro ao aprovar solicitação" });
@@ -1753,6 +1809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
 
+
       await storage.updateRenewalRequest(request.id, {
         status: "approved",
         reviewDate: new Date(),
@@ -1763,6 +1820,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await sendRenewalDecision(user, book, true, newDueDate);
       } catch (emailError: any) {
         console.error("Failed to send renewal decision email:", emailError);
+      }
+
+      // Send SMS notification
+      try {
+        if (user && user.phoneNumber && user.smsNotifications) {
+          const formattedDate = newDueDate.toLocaleDateString("pt-BR");
+          const message = `Biblioteca ISPTEC: Renovação aprovada para "${book.title}". Nova data de devolução: ${formattedDate}.`;
+          await sendSMS(user.phoneNumber, message);
+        }
+      } catch (smsError) {
+        console.error("Failed to send renewal approval SMS:", smsError);
       }
 
       res.json({ message: "Renovação aprovada", newDueDate });

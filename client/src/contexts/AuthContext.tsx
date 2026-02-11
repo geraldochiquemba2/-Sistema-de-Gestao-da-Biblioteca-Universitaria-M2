@@ -7,6 +7,8 @@ interface User {
   name: string;
   email: string;
   userType: "student" | "teacher" | "staff" | "admin";
+  phoneNumber?: string | null;
+  smsNotifications?: boolean;
 }
 
 interface AuthContextType {
