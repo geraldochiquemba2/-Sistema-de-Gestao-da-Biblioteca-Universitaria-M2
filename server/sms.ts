@@ -1,7 +1,7 @@
 import { log } from "./vite";
 
 const ECSEND_API_KEY = process.env.ECSEND_API_KEY;
-const ECSEND_BASE_URL = "https://api.ecsend.com/api/v1"; // Assuming v1 based on typical APIs, but will check documentation if available or use generic endpoint
+const ECSEND_BASE_URL = "https://ecsend.paysgator.com/api/v1";
 
 interface SmsResponse {
     success: boolean;
@@ -16,27 +16,26 @@ export async function sendSMS(to: string, message: string): Promise<SmsResponse>
     }
 
     try {
-        // Basic validation for Angolan numbers if needed, but the API might handle it.
-        // Ecsend likely expects international format without + or with +. 
-        // Let's ensure it starts with optimal format. 
-        // If 'to' is '923...', prepend '244'.
+        // Ecsend expects international format (e.g., +244...)
         let recipient = to.replace(/\s+/g, '');
         if (recipient.startsWith("9") && recipient.length === 9) {
-            recipient = "244" + recipient;
+            recipient = "+244" + recipient;
+        } else if (recipient.startsWith("244")) {
+            recipient = "+" + recipient;
         }
 
         // Using fetch to send request
-        const response = await fetch(`${ECSEND_BASE_URL}/messages`, {
+        const response = await fetch(`${ECSEND_BASE_URL}/sms/send`, {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${ECSEND_API_KEY}`,
+                "X-Api-Key": ECSEND_API_KEY,
                 "Content-Type": "application/json",
                 "Accept": "application/json"
             },
             body: JSON.stringify({
-                recipient: recipient,
-                message: message,
-                sender_id: "Biblioteca" // Optional, often customizable
+                to: recipient,
+                text: message,
+                senderId: "Biblioteca"
             }),
         });
 
