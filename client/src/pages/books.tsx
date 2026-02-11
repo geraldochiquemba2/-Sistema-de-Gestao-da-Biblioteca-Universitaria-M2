@@ -119,7 +119,7 @@ export default function Books() {
       const res = await apiRequest("POST", "/api/books/magic-fill", {
         query: magicQuery,
         image,
-        images,
+        images: imagesToUse,
         currentCategories: categories
       });
       const data = await res.json();
