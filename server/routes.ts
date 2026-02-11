@@ -1334,11 +1334,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }]
           });
 
-          // Extract the exact ID from the response
-          const suggestedId = catMatching.choices[0].message.content?.trim() || "";
+          // Robust extraction: Check if any known category ID is present in the AI response
+          const aiResponse = catMatching.choices[0].message.content || "";
+          const matchedCategory = currentCategories.find((c: any) => aiResponse.includes(c.id.toString()));
 
-          if (suggestedId && currentCategories.some((c: any) => c.id.toString() === suggestedId)) {
-            result.categoryId = suggestedId;
+          if (matchedCategory) {
+            result.categoryId = matchedCategory.id;
           }
         }
 
@@ -1398,10 +1399,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         temperature: 0.1
       });
 
-      const rawId = response.choices[0].message.content?.trim() || "";
-      // Check if the returned ID is valid
-      const isValidId = categories.some((c: any) => c.id.toString() === rawId);
-      const categoryId = isValidId ? rawId : null;
+      const aiResponse = response.choices[0].message.content || "";
+      // Check if any valid ID is inside the response text
+      const matchedCategory = categories.find((c: any) => aiResponse.includes(c.id.toString()));
+      const categoryId = matchedCategory ? matchedCategory.id : null;
 
       res.json({ categoryId });
     } catch (error: any) {
