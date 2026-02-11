@@ -1192,7 +1192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           {
             role: "user",
             content: [
-              { type: "text", text: "Você é um bibliotecário especialista e erudito. Analise esta imagem da capa de um livro. \n              1. Primeiro, identifique claramente o livro através do que está escrito.\n              2. Use o seu vasto conhecimento interno sobre literatura para preencher todos os campos, mesmo os que não estão visíveis na imagem (como ISBN, editora original, ano de publicação e uma descrição rica).\n              3. Retorne APENAS um objeto JSON (sem markdown, sem explicações) com os seguintes campos: title, author, isbn, publisher, yearPublished, description. \n              4. Seja preciso. Se o livro tiver várias edições, use a mais comum ou a original." },
+              { type: "text", text: "Você é um bibliotecário especialista e erudito. Analise esta imagem da capa de um livro. \n              1. Primeiro, identifique claramente o livro através do que está escrito.\n              2. Use o seu vasto conhecimento interno sobre literatura para preencher todos os campos, mesmo os que não estão visíveis na imagem (como ISBN, editora original, ano de publicação e uma descrição rica).\n              3. Retorne APENAS um objeto JSON (sem markdown, sem explicações) com os seguintes campos: title, author, isbn, publisher, yearPublished, description. \n              4. Seja preciso. Se o livro tiver várias edições, use a mais comum ou a original. A descrição deve ser em PORTUGUÊS." },
               {
                 type: "image_url",
                 image_url: {
@@ -1302,7 +1302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const imagesToProcess = images || (image ? [image] : []);
       if (imagesToProcess.length > 0) {
         const content: any[] = [
-          { type: "text", text: "Analise esta(s) imagem(ns) de capa/contracapa do MESMO livro e retorne consolidados em JSON: title, author, isbn, publisher, yearPublished, description." }
+          { type: "text", text: "Analise esta(s) imagem(ns) de capa/contracapa do MESMO livro e retorne consolidados em JSON: title, author, isbn, publisher, yearPublished, description. A descrição DEVE ser em PORTUGUÊS, rica e detalhada." }
         ];
 
         imagesToProcess.forEach((img: string) => {
@@ -1368,7 +1368,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Não encontramos candidatos para este livro." });
       }
 
-      res.json(candidates);
+      // Enrich candidates with AI-generated descriptions if missing
+      const enrichedCandidates = await Promise.all(candidates.slice(0, 3).map(async (candidate: any) => {
+        if (!candidate.description || candidate.description.length < 50) {
+          try {
+            const completion = await groq.chat.completions.create({
+              model: "llama-3.3-70b-versatile",
+              messages: [
+                {
+                  role: "system",
+                  content: "Você é um bibliotecário especialista. Seu objetivo é fornecer sinopses ricas e cativantes de livros."
+                },
+                {
+                  role: "user",
+                  content: `Escreva uma descrição (sinopse) detalhada em PORTUGUÊS (PT-PT ou PT-BR) para o livro "${candidate.title}" de "${candidate.author}". Se o livro for técnico, descreva seus tópicos. Se for ficção, descreva a trama sem spoilers. Mínimo de 3 parágrafos.`
+                }
+              ],
+              temperature: 0.3,
+            });
+            candidate.description = completion.choices[0].message.content || candidate.description;
+          } catch (err) {
+            console.error(`Failed to generate description for ${candidate.title}:`, err);
+          }
+        }
+        return candidate;
+      }));
+
+      // Merge back with the rest of the candidates (if any)
+      const finalCandidates = [...enrichedCandidates, ...candidates.slice(3)];
+
+      res.json(finalCandidates);
     } catch (error: any) {
       console.error("Magic Fill Error:", error);
       res.status(500).json({ message: "A varinha mágica falhou: " + error.message });
