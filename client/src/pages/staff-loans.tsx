@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Calendar, ArrowLeft, RefreshCw, AlertCircle, LogOut, Clock } from "lucide-react";
+import { BookOpen, Calendar, ArrowLeft, RefreshCw, AlertCircle, LogOut, Clock, X, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, isPast, differenceInDays } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -85,6 +85,26 @@ export default function StaffLoans() {
         description: "O pedido de empréstimo foi removido.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/loan-requests"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao cancelar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const cancelRenewalMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      await apiRequest("DELETE", `/api/renewal-requests/${requestId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Solicitação cancelada",
+        description: "O pedido de renovação foi removido.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/renewal-requests"] });
     },
     onError: (error: any) => {
       toast({
@@ -256,30 +276,47 @@ export default function StaffLoans() {
                         <div className="text-sm text-muted-foreground">
                           <span>Renovações: {loan.renewalCount}/2</span>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => requestRenewalMutation.mutate(loan.id)}
-                          disabled={requestRenewalMutation.isPending || loan.renewalCount >= 2 || hasPendingRenewal}
-                          data-testid={`button-renew-${loan.id}`}
-                        >
-                          {hasPendingRenewal ? (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                              Solicitação Pendente
-                            </>
-                          ) : requestRenewalMutation.isPending ? (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                              Solicitando...
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                              Solicitar Renovação
-                            </>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => requestRenewalMutation.mutate(loan.id)}
+                            disabled={requestRenewalMutation.isPending || loan.renewalCount >= 2 || hasPendingRenewal}
+                            data-testid={`button-renew-${loan.id}`}
+                          >
+                            {requestRenewalMutation.isPending ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                Solicitando...
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Solicitar Renovação
+                              </>
+                            )}
+                          </Button>
+                          {hasPendingRenewal && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2 flex items-center gap-1 border border-destructive/20"
+                              onClick={() => {
+                                const request = pendingRenewals.find((r: any) => r.loanId === loan.id && r.status === 'pending');
+                                if (request) cancelRenewalMutation.mutate(request.id);
+                              }}
+                              disabled={cancelRenewalMutation.isPending}
+                              title="Cancelar solicitação de renovação"
+                            >
+                              {cancelRenewalMutation.isPending && cancelRenewalMutation.variables === pendingRenewals.find((r: any) => r.loanId === loan.id && r.status === 'pending')?.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <X className="h-4 w-4" />
+                              )}
+                              <span className="text-xs">Cancelar</span>
+                            </Button>
                           )}
-                        </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -342,7 +379,11 @@ export default function StaffLoans() {
                               disabled={cancelRequestMutation.isPending}
                               title="Cancelar solicitação"
                             >
-                              <LogOut className="h-4 w-4 rotate-180" />
+                              {cancelRequestMutation.isPending && cancelRequestMutation.variables === req.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <X className="h-4 w-4" />
+                              )}
                             </Button>
                           </div>
                         </CardContent>

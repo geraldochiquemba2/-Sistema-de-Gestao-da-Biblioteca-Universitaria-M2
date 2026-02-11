@@ -90,6 +90,16 @@ export function AppSidebar() {
         url: "/repository",
         icon: BookOpen,
       },
+      {
+        title: "Autores",
+        url: "/authors",
+        icon: Users,
+      },
+      {
+        title: "Categorias",
+        url: "/categories",
+        icon: Tag,
+      },
     ];
   };
 

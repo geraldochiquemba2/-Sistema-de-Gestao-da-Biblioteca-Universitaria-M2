@@ -27,6 +27,8 @@ import StaffLoans from "@/pages/staff-loans";
 import BookSearch from "@/pages/book-search";
 import ReadingHistory from "@/pages/reading-history";
 import Repository from "@/pages/repository";
+import Authors from "@/pages/authors";
+import Categories from "@/pages/categories";
 import NotFound from "@/pages/not-found";
 import { AIAssistant } from "@/components/AIAssistant";
 
@@ -156,6 +158,20 @@ function Router() {
         <PrivateRoute requiredRole="admin">
           <AuthenticatedLayout>
             <Reports />
+          </AuthenticatedLayout>
+        </PrivateRoute>
+      </Route>
+      <Route path="/authors">
+        <PrivateRoute requiredRole="admin">
+          <AuthenticatedLayout>
+            <Authors />
+          </AuthenticatedLayout>
+        </PrivateRoute>
+      </Route>
+      <Route path="/categories">
+        <PrivateRoute requiredRole="admin">
+          <AuthenticatedLayout>
+            <Categories />
           </AuthenticatedLayout>
         </PrivateRoute>
       </Route>

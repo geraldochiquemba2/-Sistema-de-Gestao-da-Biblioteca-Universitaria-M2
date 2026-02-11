@@ -25,7 +25,10 @@ import {
   renewalRequests,
   type Review,
   type InsertReview,
-  reviews
+  reviews,
+  authors,
+  type Author,
+  type InsertAuthor
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, and, or, lt } from "drizzle-orm";
@@ -104,6 +107,17 @@ export interface IStorage {
   deleteRenewalRequest(id: string): Promise<boolean>;
   deleteReservation(id: string): Promise<boolean>;
   deleteReservationByUserAndBook(userId: string, bookId: string): Promise<boolean>;
+
+  // Author methods
+  getAuthor(id: string): Promise<Author | undefined>;
+  getAllAuthors(): Promise<Author[]>;
+  createAuthor(author: InsertAuthor): Promise<Author>;
+  updateAuthor(id: string, author: Partial<Author>): Promise<Author | undefined>;
+  deleteAuthor(id: string): Promise<boolean>;
+
+  // Category methods (extending existing)
+  updateCategory(id: string, category: Partial<Category>): Promise<Category | undefined>;
+  deleteCategory(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -194,6 +208,59 @@ export class DatabaseStorage implements IStorage {
   async createCategory(insertCategory: InsertCategory): Promise<Category> {
     const [category] = await db.insert(categories).values(insertCategory).returning();
     return category;
+  }
+
+  async updateCategory(id: string, categoryData: Partial<Category>): Promise<Category | undefined> {
+    const [updatedCategory] = await db
+      .update(categories)
+      .set(categoryData)
+      .where(eq(categories.id, id))
+      .returning();
+    return updatedCategory;
+  }
+
+  async deleteCategory(id: string): Promise<boolean> {
+    // Check if category has books
+    const categoryBooks = await db.select().from(books).where(eq(books.categoryId, id));
+    if (categoryBooks.length > 0) {
+      throw new Error("Não é possível apagar uma categoria que possui livros associados.");
+    }
+    const [deletedCategory] = await db.delete(categories).where(eq(categories.id, id)).returning();
+    return !!deletedCategory;
+  }
+
+  // Author methods
+  async getAuthor(id: string): Promise<Author | undefined> {
+    const [author] = await db.select().from(authors).where(eq(authors.id, id));
+    return author;
+  }
+
+  async getAllAuthors(): Promise<Author[]> {
+    return await db.select().from(authors);
+  }
+
+  async createAuthor(insertAuthor: InsertAuthor): Promise<Author> {
+    const [author] = await db.insert(authors).values(insertAuthor).returning();
+    return author;
+  }
+
+  async updateAuthor(id: string, authorData: Partial<Author>): Promise<Author | undefined> {
+    const [updatedAuthor] = await db
+      .update(authors)
+      .set(authorData)
+      .where(eq(authors.id, id))
+      .returning();
+    return updatedAuthor;
+  }
+
+  async deleteAuthor(id: string): Promise<boolean> {
+    // Check if author has books
+    const authorBooks = await db.select().from(books).where(eq(books.authorId, id));
+    if (authorBooks.length > 0) {
+      throw new Error("Não é possível apagar um autor que possui livros associados.");
+    }
+    const [deletedAuthor] = await db.delete(authors).where(eq(authors.id, id)).returning();
+    return !!deletedAuthor;
   }
 
   // Loan methods

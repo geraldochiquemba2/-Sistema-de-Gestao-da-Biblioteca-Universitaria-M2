@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertBookSchema, insertUserSchema, insertLoanSchema, insertReservationSchema, insertFineSchema, insertCategorySchema, insertReviewSchema } from "@shared/schema";
+import { insertBookSchema, insertUserSchema, insertLoanSchema, insertReservationSchema, insertFineSchema, insertCategorySchema, insertReviewSchema, insertAuthorSchema } from "@shared/schema";
 import OpenAI from "openai";
 import { createWorker } from "tesseract.js";
 import { sendLoanConfirmation, sendRenewalRequestAlert, sendRenewalDecision } from "./email";
@@ -388,6 +388,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/categories/:id", async (req, res) => {
+    try {
+      const category = await storage.updateCategory(req.params.id, req.body);
+      if (!category) {
+        return res.status(404).json({ message: "Categoria não encontrada" });
+      }
+      res.json(category);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao atualizar categoria" });
+    }
+  });
+
+  app.delete("/api/categories/:id", async (req, res) => {
+    try {
+      await storage.deleteCategory(req.params.id);
+      res.json({ message: "Categoria deletada com sucesso" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Erro ao deletar categoria" });
+    }
+  });
+
+  // Author routes
+  app.get("/api/authors", async (req, res) => {
+    try {
+      const authorsList = await storage.getAllAuthors();
+      res.json(authorsList);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar autores" });
+    }
+  });
+
+  app.post("/api/authors", async (req, res) => {
+    try {
+      const authorData = insertAuthorSchema.parse(req.body);
+      const author = await storage.createAuthor(authorData);
+      res.status(201).json(author);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Erro ao criar autor" });
+    }
+  });
+
+  app.patch("/api/authors/:id", async (req, res) => {
+    try {
+      const author = await storage.updateAuthor(req.params.id, req.body);
+      if (!author) {
+        return res.status(404).json({ message: "Autor não encontrado" });
+      }
+      res.json(author);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao atualizar autor" });
+    }
+  });
+
+  app.delete("/api/authors/:id", async (req, res) => {
+    try {
+      await storage.deleteAuthor(req.params.id);
+      res.json({ message: "Autor deletado com sucesso" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Erro ao deletar autor" });
+    }
+  });
+
   // Book routes
   app.get("/api/books", async (req, res) => {
     try {
@@ -669,6 +731,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateBook(bookId, {
         availableCopies: book.availableCopies - 1,
       });
+
+      // Remove any existing reservation for this user and book
+      await storage.deleteReservationByUserAndBook(userId, bookId);
 
       // Send email confirmation
       try {
@@ -1623,6 +1688,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateBook(request.bookId, {
         availableCopies: book.availableCopies - 1,
       });
+
+      // Remove any existing reservation for this user and book
+      await storage.deleteReservationByUserAndBook(request.userId, request.bookId);
 
       await storage.updateLoanRequest(request.id, {
         status: "approved",

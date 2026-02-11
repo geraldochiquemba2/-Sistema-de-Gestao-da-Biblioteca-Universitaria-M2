@@ -10,7 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, DollarSign } from "lucide-react";
+import { Search, DollarSign, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -184,6 +184,9 @@ export default function Fines() {
                     onClick={() => payFineMutation.mutate(fine.id)}
                     disabled={payFineMutation.isPending}
                   >
+                    {payFineMutation.isPending && payFineMutation.variables === fine.id ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : null}
                     {payFineMutation.isPending ? "Processando..." : "Liquidar"}
                   </Button>
                 )}
@@ -247,6 +250,9 @@ export default function Fines() {
                           onClick={() => payFineMutation.mutate(fine.id)}
                           disabled={payFineMutation.isPending}
                         >
+                          {payFineMutation.isPending && payFineMutation.variables === fine.id ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : null}
                           {payFineMutation.isPending ? "Processando..." : "Liquidar"}
                         </Button>
                       )}

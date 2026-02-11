@@ -31,11 +31,19 @@ export const categories = pgTable("categories", {
   description: text("description"),
 });
 
+// Authors table
+export const authors = pgTable("authors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  biography: text("biography"),
+});
+
 // Books table
 export const books = pgTable("books", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
-  author: text("author").notNull(),
+  author: text("author").notNull(), // String for legacy/simple entry
+  authorId: varchar("author_id").references(() => authors.id), // Link to Authors table
   isbn: text("isbn").unique(),
   publisher: text("publisher"),
   yearPublished: integer("year_published"),
@@ -125,6 +133,7 @@ export const reviews = pgTable("reviews", {
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });
+export const insertAuthorSchema = createInsertSchema(authors).omit({ id: true });
 export const insertBookSchema = createInsertSchema(books).omit({ id: true, createdAt: true });
 export const insertLoanSchema = createInsertSchema(loans).omit({ id: true, createdAt: true, loanDate: true, returnDate: true, renewalCount: true });
 export const insertReservationSchema = createInsertSchema(reservations).omit({ id: true, createdAt: true, status: true, notificationDate: true, expirationDate: true });
@@ -139,6 +148,9 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type Category = typeof categories.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
+
+export type Author = typeof authors.$inferSelect;
+export type InsertAuthor = z.infer<typeof insertAuthorSchema>;
 
 export type Book = typeof books.$inferSelect;
 export type InsertBook = z.infer<typeof insertBookSchema>;

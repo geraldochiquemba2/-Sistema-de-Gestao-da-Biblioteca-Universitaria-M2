@@ -28,12 +28,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 
 const bookFormSchema = z.object({
-  title: z.string().optional(),
-  author: z.string().optional(),
+  title: z.string().min(1, "Título é obrigatório"),
+  author: z.string().optional(), // Keeping for backward compatibility
+  authorId: z.string().min(1, "Autor é obrigatório"),
   isbn: z.string().optional(),
   publisher: z.string().optional(),
   yearPublished: z.number().optional(),
-  categoryId: z.string().optional(),
+  categoryId: z.string().min(1, "Categoria é obrigatória"),
   tag: z.enum(["red", "yellow", "white"]),
   totalCopies: z.number().min(1),
   availableCopies: z.number().min(0),
@@ -193,6 +194,9 @@ export default function Books() {
     if (data.categoryId) {
       form.setValue("categoryId", data.categoryId);
     }
+    if (data.authorId) {
+      form.setValue("authorId", data.authorId);
+    }
   };
 
   const handleMagicImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -269,13 +273,19 @@ export default function Books() {
     queryKey: ["/api/categories"],
   });
 
+  const { data: authors } = useQuery<any[]>({
+    queryKey: ["/api/authors"],
+  });
+
   const form = useForm<BookFormValues>({
     resolver: zodResolver(bookFormSchema),
     defaultValues: {
       title: "",
       author: "",
+      authorId: "",
       isbn: "",
       publisher: "",
+      categoryId: "",
       tag: "white",
       totalCopies: 1,
       availableCopies: 1,
@@ -288,8 +298,10 @@ export default function Books() {
     form.reset({
       title: "",
       author: "",
+      authorId: "",
       isbn: "",
       publisher: "",
+      categoryId: "",
       tag: "white",
       totalCopies: 1,
       availableCopies: 1,
@@ -307,6 +319,7 @@ export default function Books() {
       publisher: book.publisher || "",
       yearPublished: book.yearPublished || undefined,
       categoryId: book.categoryId || undefined,
+      authorId: book.authorId || undefined,
       tag: book.tag,
       totalCopies: book.totalCopies,
       availableCopies: book.availableCopies,
@@ -556,13 +569,31 @@ export default function Books() {
                 />
                 <FormField
                   control={form.control}
-                  name="author"
+                  name="authorId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Autor</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-author" />
-                      </FormControl>
+                      <Select
+                        onValueChange={(val) => {
+                          field.onChange(val);
+                          const selectedAuthor = authors?.find(a => a.id === val);
+                          if (selectedAuthor) form.setValue("author", selectedAuthor.name);
+                        }}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-author">
+                            <SelectValue placeholder="Selecione um autor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {authors?.map((author) => (
+                            <SelectItem key={author.id} value={author.id}>
+                              {author.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -713,7 +744,12 @@ export default function Books() {
                   )}
                 />
                 <Button type="submit" className="w-full" disabled={createBookMutation.isPending} data-testid="button-submit-book">
-                  {createBookMutation.isPending ? "Salvando..." : editingBook ? "Atualizar Livro" : "Cadastrar Livro"}
+                  {createBookMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : editingBook ? "Atualizar Livro" : "Cadastrar Livro"}
                 </Button>
               </form>
             </Form>
@@ -860,7 +896,11 @@ export default function Books() {
                           <AlertDialogAction
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             onClick={() => deleteBookMutation.mutate(book.id)}
+                            disabled={deleteBookMutation.isPending}
                           >
+                            {deleteBookMutation.isPending && deleteBookMutation.variables === book.id ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : null}
                             Excluir
                           </AlertDialogAction>
                         </AlertDialogFooter>
