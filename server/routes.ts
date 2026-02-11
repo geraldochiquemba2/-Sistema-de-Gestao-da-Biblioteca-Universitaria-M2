@@ -1327,20 +1327,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
               role: "system",
               content: `Você é um bibliotecário especialista. Analise o título, autor e descrição do livro e selecione a categoria MAIS ADEQUADA.
               Importante: Se não houver uma categoria óbvia, selecione a que mais se aproxima pelo tema.
-              Categorias disponíveis (retorne APENAS o ID numérico): ${currentCategories.map((c: any) => `"${c.name}" (ID: ${c.id})`).join(", ")}.`
+              Categorias disponíveis (retorne APENAS o ID exato): ${currentCategories.map((c: any) => `"${c.name}" (ID: ${c.id})`).join(", ")}.`
             }, {
               role: "user",
               content: `Livro: ${result.title} - ${result.author}. Descrição: ${result.description || "N/A"}`
             }]
           });
 
-          // Extract only the numeric ID from the response (in case AI adds text)
-          const rawId = catMatching.choices[0].message.content || "";
-          const match = rawId.match(/\d+/);
-          const suggestedId = match ? match[0] : null;
+          // Extract the exact ID from the response
+          const suggestedId = catMatching.choices[0].message.content?.trim() || "";
 
-          if (suggestedId && currentCategories.some((c: any) => c.id.toString() === suggestedId.toString())) {
-            result.categoryId = parseInt(suggestedId);
+          if (suggestedId && currentCategories.some((c: any) => c.id.toString() === suggestedId)) {
+            result.categoryId = suggestedId;
           }
         }
 
@@ -1400,9 +1398,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         temperature: 0.1
       });
 
-      const rawId = response.choices[0].message.content || "";
-      const match = rawId.match(/\d+/);
-      const categoryId = match ? parseInt(match[0]) : null;
+      const rawId = response.choices[0].message.content?.trim() || "";
+      // Check if the returned ID is valid
+      const isValidId = categories.some((c: any) => c.id.toString() === rawId);
+      const categoryId = isValidId ? rawId : null;
 
       res.json({ categoryId });
     } catch (error: any) {
