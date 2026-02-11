@@ -368,7 +368,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validation for Angolan phone number if provided
       if (phoneNumber) {
         // Remove spaces and dashes
-        const cleanPhone = phoneNumber.replace(/[\s-]/g, '');
+        // Remove spaces, dashes, and parentheses
+        const cleanPhone = phoneNumber.replace(/[\s\-\(\)]/g, '');
         // Check if it matches +2449... or 9... format
         const isAngolan = /^(?:\+244)?9\d{8}$/.test(cleanPhone);
         if (!isAngolan) {
@@ -1593,6 +1594,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reviewDate: null,
         notes: null,
       });
+
+      // Send SMS confirmation for the request
+      try {
+        if (user.phoneNumber && user.smsNotifications) {
+          const message = `Biblioteca ISPTEC: Sua solicitação para "${book.title}" foi recebida e está aguardando aprovação.`;
+          await sendSMS(user.phoneNumber, message);
+        }
+      } catch (smsError) {
+        console.error("Failed to send loan request confirmation SMS:", smsError);
+      }
 
       res.status(201).json(request);
     } catch (error: any) {

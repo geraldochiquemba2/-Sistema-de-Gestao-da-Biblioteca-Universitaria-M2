@@ -70,7 +70,7 @@ export function NotificationSettings() {
                     <div className="flex gap-2">
                         <Input
                             id="phone"
-                            placeholder="923 000 000"
+                            placeholder="+244 923 000 000"
                             value={phoneNumber}
                             onChange={(e) => setPhoneNumber(e.target.value)}
                         />
