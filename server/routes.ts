@@ -257,7 +257,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           username: user.username,
           name: user.name,
           email: user.email,
-          userType: user.userType
+          userType: user.userType,
+          phoneNumber: user.phoneNumber,
+          smsNotifications: user.smsNotifications
         }
       });
     } catch (error) {
@@ -324,7 +326,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Utilizador não encontrado" });
       }
       const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      res.json({
+        ...userWithoutPassword,
+        phoneNumber: user.phoneNumber,
+        smsNotifications: user.smsNotifications
+      });
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar utilizador" });
     }

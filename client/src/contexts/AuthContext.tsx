@@ -14,6 +14,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (user: User) => void;
+  updateUser: (user: User) => void;
   logout: () => void;
   isAdmin: boolean;
   isTeacher: boolean;
@@ -46,6 +47,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("user", JSON.stringify(userData));
   };
 
+  const updateUser = (userData: User) => {
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem("user");
@@ -55,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = {
     user,
     login,
+    updateUser,
     logout,
     isAdmin: user?.userType === "admin",
     isTeacher: user?.userType === "teacher",

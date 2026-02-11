@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function StudentDashboard() {
-  const { user, logout } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const [, setLocation] = useLocation();
 
   const { data: loans, isLoading: loansLoading } = useQuery({
@@ -64,15 +64,13 @@ export default function StudentDashboard() {
       });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedUser: any) => {
       toast({
         title: "Sucesso",
         description: "Configurações de notificação atualizadas com sucesso.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] }); // Assuming there's a user query or similar mechanism to refresh auth context if needed
-      // Actually, since user comes from auth context, we might need a way to reload it or just rely on the next page load.
-      // But typically creating a side effect to reload auth user is good.
-      // For now, let's just toast.
+      updateUser(updatedUser);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
     onError: (error: Error) => {
       toast({
