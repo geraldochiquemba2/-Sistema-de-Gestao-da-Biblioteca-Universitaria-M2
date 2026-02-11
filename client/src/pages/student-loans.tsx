@@ -139,7 +139,9 @@ export default function StudentLoans() {
   };
 
   const isOverdue = (dueDate: string) => {
-    return isPast(new Date(dueDate)) && !isPast(new Date(dueDate).setHours(23, 59, 59));
+    const endOfDueDay = new Date(dueDate);
+    endOfDueDay.setHours(23, 59, 59, 999);
+    return isPast(endOfDueDay);
   };
 
   return (

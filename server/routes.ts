@@ -795,10 +795,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Não é possível renovar. Existem reservas pendentes para este livro." });
       }
 
-      // Check for unpaid fines
+      // Check for unpaid fines - only block if total is >= 2000 Kz
       const totalFines = await getUserTotalFines(loan.userId);
-      if (totalFines > 0) {
-        return res.status(400).json({ message: "Você tem multas pendentes. Pague para renovar empréstimos." });
+      if (totalFines >= MAX_FINE_FOR_LOAN) {
+        return res.status(400).json({ message: `O utilizador tem multas acumuladas de ${totalFines} Kz. Pague para liberar renovações.` });
       }
 
       // Calculate new due date
@@ -1742,6 +1742,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/renewal-requests", async (req, res) => {
     try {
       const { loanId, userId } = req.body;
+
+      // Check for existing pending request
+      const existingRequests = await storage.getRenewalRequestsByUser(userId);
+      const hasPending = existingRequests.some(r => r.loanId === loanId && r.status === "pending");
+      if (hasPending) {
+        return res.status(400).json({ message: "Já existe uma solicitação de renovação pendente para este empréstimo" });
+      }
+
+      const loan = await storage.getLoan(loanId);
+      if (!loan) {
+        return res.status(404).json({ message: "Empréstimo não encontrado" });
+      }
+
+      if (loan.renewalCount >= MAX_RENEWALS) {
+        return res.status(400).json({ message: `Limite de ${MAX_RENEWALS} renovações atingido` });
+      }
 
       const request = await storage.createRenewalRequest({
         loanId,

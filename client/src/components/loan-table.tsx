@@ -103,7 +103,7 @@ export function LoanTable({ loans, onReturn, onRenew, onViewUser }: LoanTablePro
                 ) : null}
 
                 <div className="flex flex-wrap gap-2 pt-2 border-t">
-                  {loan.status === "active" && (
+                  {(loan.status === "active" || loan.status === "overdue") && (
                     <>
                       <Button
                         variant="outline"
@@ -207,7 +207,7 @@ export function LoanTable({ loans, onReturn, onRenew, onViewUser }: LoanTablePro
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
-                        {loan.status === "active" && (
+                        {(loan.status === "active" || loan.status === "overdue") && (
                           <>
                             <Button
                               variant="outline"
