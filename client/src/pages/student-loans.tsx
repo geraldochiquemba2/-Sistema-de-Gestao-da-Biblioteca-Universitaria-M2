@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Calendar, ArrowLeft, RefreshCw, AlertCircle, LogOut, Clock, X } from "lucide-react";
+import { BookOpen, Calendar, ArrowLeft, RefreshCw, AlertCircle, LogOut, Clock, X, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, isPast, differenceInDays } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -66,6 +66,7 @@ export default function StudentLoans() {
         description: "O pedido de renovação foi enviado para análise do administrador.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/renewal-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loans/user"] });
     },
     onError: (error: any) => {
       toast({
@@ -86,6 +87,7 @@ export default function StudentLoans() {
         description: "O pedido de renovação foi removido.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/renewal-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loans/user"] });
     },
     onError: (error: any) => {
       toast({
@@ -106,6 +108,7 @@ export default function StudentLoans() {
         description: "O pedido de empréstimo foi removido.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/loan-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loans/user"] });
     },
     onError: (error: any) => {
       toast({
@@ -304,7 +307,11 @@ export default function StudentLoans() {
                                 disabled={cancelRenewalMutation.isPending}
                                 title="Cancelar solicitação de renovação"
                               >
-                                <X className="h-4 w-4" />
+                                {cancelRenewalMutation.isPending && cancelRenewalMutation.variables === pendingRenewals.find((r: any) => r.loanId === loan.id && r.status === 'pending')?.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <X className="h-4 w-4" />
+                                )}
                                 <span className="text-xs">Cancelar</span>
                               </Button>
                             </div>
@@ -392,7 +399,11 @@ export default function StudentLoans() {
                               disabled={cancelRequestMutation.isPending}
                               title="Cancelar solicitação"
                             >
-                              <LogOut className="h-4 w-4 rotate-180" />
+                              {cancelRequestMutation.isPending && cancelRequestMutation.variables === req.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <X className="h-4 w-4" />
+                              )}
                             </Button>
                           </div>
                         </CardContent>
@@ -405,6 +416,6 @@ export default function StudentLoans() {
           </>
         )}
       </main>
-    </div>
+    </div >
   );
 }

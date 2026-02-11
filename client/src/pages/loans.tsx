@@ -117,53 +117,80 @@ export default function Loans() {
     },
   });
 
-  const handleReturn = async (id: string) => {
-    try {
+  const returnLoanMutation = useMutation({
+    mutationFn: async (id: string) => {
       await apiRequest("POST", `/api/loans/${id}/return`);
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/loans"] });
       queryClient.invalidateQueries({ queryKey: ["/api/books"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loans/user"] });
       toast({ title: "Livro devolvido com sucesso" });
-    } catch (error) {
-      toast({ title: "Erro ao devolver", variant: "destructive" });
-    }
-  };
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao devolver",
+        description: error.message || "Tente novamente",
+        variant: "destructive",
+      });
+    },
+  });
 
-  const handleRenew = async (id: string) => {
-    try {
+  const renewLoanMutation = useMutation({
+    mutationFn: async (id: string) => {
       await apiRequest("POST", `/api/loans/${id}/renew`);
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/loans"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loans/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/renewal-requests"] });
       toast({ title: "Empréstimo renovado com sucesso" });
-    } catch (error) {
-      toast({ title: "Erro ao renovar", variant: "destructive" });
-    }
-  };
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao renovar",
+        description: error.message || "Tente novamente",
+        variant: "destructive",
+      });
+    },
+  });
 
-  const handleApproveRequest = async (id: string) => {
-    try {
+  const approveLoanMutation = useMutation({
+    mutationFn: async (id: string) => {
       await apiRequest("POST", `/api/loan-requests/${id}/approve`);
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/loan-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/loans"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/loans/user"] }); // Atualiza dashboard do user
+      queryClient.invalidateQueries({ queryKey: ["/api/loans/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/books"] });
       toast({ title: "Solicitação aprovada e empréstimo criado!" });
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       toast({
         title: "Erro ao aprovar",
         description: error.message || "Tente novamente",
         variant: "destructive"
       });
     }
-  };
+  });
 
-  const handleRejectRequest = async (id: string) => {
-    try {
+  const rejectLoanMutation = useMutation({
+    mutationFn: async (id: string) => {
       await apiRequest("POST", `/api/loan-requests/${id}/reject`);
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/loan-requests"] });
       toast({ title: "Solicitação rejeitada" });
-    } catch (error) {
-      toast({ title: "Erro ao rejeitar", variant: "destructive" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao rejeitar",
+        description: error.message || "Tente novamente",
+        variant: "destructive"
+      });
     }
-  };
+  });
 
   const approveRenewalMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -172,6 +199,7 @@ export default function Loans() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/renewal-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/loans"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loans/user"] });
       toast({ title: "Renovação aprovada!" });
     },
     onError: (error: any) => {
@@ -394,8 +422,9 @@ export default function Loans() {
         <TabsContent value="active" className="space-y-4">
           <LoanTable
             loans={filterLoans(activeLoans)}
-            onReturn={handleReturn}
-            onRenew={handleRenew}
+            onReturn={(id) => returnLoanMutation.mutate(id)}
+            onRenew={(id) => renewLoanMutation.mutate(id)}
+            processingId={returnLoanMutation.isPending ? returnLoanMutation.variables : (renewLoanMutation.isPending ? renewLoanMutation.variables : null)}
             onViewUser={(loanId) => {
               const loan = loans?.find(l => l.id === loanId);
               if (loan) {
@@ -450,16 +479,28 @@ export default function Loans() {
                                   size="sm"
                                   variant="outline"
                                   className="text-destructive hover:bg-destructive/10"
-                                  onClick={() => handleRejectRequest(req.id)}
+                                  onClick={() => rejectLoanMutation.mutate(req.id)}
+                                  disabled={rejectLoanMutation.isPending || approveLoanMutation.isPending}
                                 >
-                                  <X className="h-4 w-4 mr-1" /> Rejeitar
+                                  {rejectLoanMutation.isPending && rejectLoanMutation.variables === req.id ? (
+                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  ) : (
+                                    <X className="h-4 w-4 mr-1" />
+                                  )}
+                                  Rejeitar
                                 </Button>
                                 <Button
                                   size="sm"
                                   className="bg-chart-2 hover:bg-chart-2/90"
-                                  onClick={() => handleApproveRequest(req.id)}
+                                  onClick={() => approveLoanMutation.mutate(req.id)}
+                                  disabled={approveLoanMutation.isPending || rejectLoanMutation.isPending}
                                 >
-                                  <Check className="h-4 w-4 mr-1" /> Aprovar
+                                  {approveLoanMutation.isPending && approveLoanMutation.variables === req.id ? (
+                                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                  ) : (
+                                    <Check className="h-4 w-4 mr-1" />
+                                  )}
+                                  Aprovar
                                 </Button>
                               </div>
                             </td>
@@ -523,7 +564,7 @@ export default function Loans() {
                                   onClick={() => rejectRenewalMutation.mutate(req.id)}
                                   disabled={rejectRenewalMutation.isPending || approveRenewalMutation.isPending}
                                 >
-                                  {rejectRenewalMutation.isPending ? (
+                                  {rejectRenewalMutation.isPending && rejectRenewalMutation.variables === req.id ? (
                                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                                   ) : (
                                     <X className="h-4 w-4 mr-1" />
@@ -536,7 +577,7 @@ export default function Loans() {
                                   onClick={() => approveRenewalMutation.mutate(req.id)}
                                   disabled={approveRenewalMutation.isPending || rejectRenewalMutation.isPending}
                                 >
-                                  {approveRenewalMutation.isPending ? (
+                                  {approveRenewalMutation.isPending && approveRenewalMutation.variables === req.id ? (
                                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                                   ) : (
                                     <Check className="h-4 w-4 mr-1" />
@@ -559,8 +600,9 @@ export default function Loans() {
         <TabsContent value="overdue" className="space-y-4">
           <LoanTable
             loans={filterLoans(overdueLoans)}
-            onReturn={handleReturn}
-            onRenew={handleRenew}
+            onReturn={(id) => returnLoanMutation.mutate(id)}
+            onRenew={(id) => renewLoanMutation.mutate(id)}
+            processingId={returnLoanMutation.isPending ? returnLoanMutation.variables : (renewLoanMutation.isPending ? renewLoanMutation.variables : null)}
             onViewUser={(loanId) => {
               const loan = loans?.find(l => l.id === loanId);
               if (loan) {

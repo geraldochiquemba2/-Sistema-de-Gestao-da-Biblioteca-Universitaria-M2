@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { format, differenceInDays } from "date-fns";
 
+import { Loader2 } from "lucide-react";
+
 export interface Loan {
   id: string;
   userId: string;
@@ -30,6 +32,7 @@ interface LoanTableProps {
   onReturn?: (loanId: string) => void;
   onRenew?: (loanId: string) => void;
   onViewUser?: (loanId: string) => void;
+  processingId?: string | null;
 }
 
 const statusConfig = {
@@ -38,7 +41,7 @@ const statusConfig = {
   returned: { text: "Devolvido", color: "bg-muted text-muted-foreground" },
 };
 
-export function LoanTable({ loans, onReturn, onRenew, onViewUser }: LoanTableProps) {
+export function LoanTable({ loans, onReturn, onRenew, onViewUser, processingId }: LoanTableProps) {
   const getDaysRemaining = (dueDate: Date) => {
     const days = differenceInDays(dueDate, new Date());
     return days;
@@ -110,14 +113,22 @@ export function LoanTable({ loans, onReturn, onRenew, onViewUser }: LoanTablePro
                         size="sm"
                         className="flex-1"
                         onClick={() => onRenew?.(loan.id)}
+                        disabled={!!processingId}
                       >
+                        {processingId === loan.id ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : null}
                         Renovar
                       </Button>
                       <Button
                         size="sm"
                         className="flex-1"
                         onClick={() => onReturn?.(loan.id)}
+                        disabled={!!processingId}
                       >
+                        {processingId === loan.id ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : null}
                         Devolver
                       </Button>
                     </>
@@ -213,15 +224,23 @@ export function LoanTable({ loans, onReturn, onRenew, onViewUser }: LoanTablePro
                               variant="outline"
                               size="sm"
                               onClick={() => onRenew?.(loan.id)}
+                              disabled={!!processingId}
                               data-testid={`button-renew-${loan.id}`}
                             >
+                              {processingId === loan.id ? (
+                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                              ) : null}
                               Renovar
                             </Button>
                             <Button
                               size="sm"
                               onClick={() => onReturn?.(loan.id)}
+                              disabled={!!processingId}
                               data-testid={`button-return-${loan.id}`}
                             >
+                              {processingId === loan.id ? (
+                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                              ) : null}
                               Devolver
                             </Button>
                           </>
