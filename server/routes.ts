@@ -520,7 +520,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/books/:id", async (req, res) => {
     try {
-      const success = await storage.deleteBook(req.params.id);
+      const bookId = req.params.id;
+
+      // Check for active or overdue loans
+      const bookLoans = await storage.getLoansByBook(bookId);
+      const activeLoans = bookLoans.filter(l => l.status === "active" || l.status === "overdue");
+
+      if (activeLoans.length > 0) {
+        return res.status(400).json({
+          message: "Não é possível apagar um livro que possui empréstimos activos ou em atraso. Por favor, solicite a devolução primeiro."
+        });
+      }
+
+      const success = await storage.deleteBook(bookId);
       if (!success) {
         return res.status(404).json({ message: "Livro não encontrado" });
       }
