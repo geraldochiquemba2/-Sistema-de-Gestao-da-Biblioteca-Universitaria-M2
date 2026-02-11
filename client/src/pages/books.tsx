@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Search, BookOpen, Tag, Camera, Loader2, Edit, Trash2, Star, History, DollarSign, MessageSquare, Wand2, Sparkles } from "lucide-react";
+import { Plus, Search, BookOpen, Tag, Camera, Loader2, Edit, Trash2, Star, History, DollarSign, MessageSquare, Wand2, Sparkles, XCircle, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -105,11 +105,13 @@ export default function Books() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
   const [viewingReviewsBook, setViewingReviewsBook] = useState<any | null>(null);
   const [magicQuery, setMagicQuery] = useState("");
+  const [queuedImages, setQueuedImages] = useState<string[]>([]);
   const [isMagicLoading, setIsMagicLoading] = useState(false);
   const { toast } = useToast();
 
   const handleMagicFill = async (image?: string, images?: string[]) => {
-    if (!magicQuery && !image && !images) return;
+    const imagesToUse = images || queuedImages;
+    if (!magicQuery && !image && (!imagesToUse || imagesToUse.length === 0)) return;
 
     setIsMagicLoading(true);
     setSearchResults(null); // Clear previous searches
@@ -133,6 +135,7 @@ export default function Books() {
         // Image search or direct result
         populateBookForm(data);
         setMagicQuery("");
+        setQueuedImages([]); // Clear queue after success
         toast({
           title: "Pirlimpimpim! ✨",
           description: "Os dados foram preenchidos e a categoria sugerida automaticamente.",
@@ -239,7 +242,7 @@ export default function Books() {
           });
         })
       );
-      handleMagicFill(undefined, compressedImages);
+      setQueuedImages(prev => [...prev, ...compressedImages]);
     } catch (error: any) {
       toast({
         title: "Erro ao processar imagens",
@@ -373,7 +376,10 @@ export default function Books() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
-          if (!open) setEditingBook(null);
+          if (!open) {
+            setEditingBook(null);
+            setQueuedImages([]);
+          }
         }}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-book" onClick={openAddDialog}>
@@ -415,7 +421,7 @@ export default function Books() {
                   />
                   <Button
                     type="button"
-                    variant="primary"
+                    variant="default"
                     onClick={() => handleMagicFill()}
                     disabled={isMagicLoading || !magicQuery.trim()}
                     className="shadow-sm"
@@ -430,16 +436,66 @@ export default function Books() {
                   <div className="h-[1px] flex-1 bg-primary/10" />
                 </div>
 
-                <div className="flex justify-center">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full gap-2 border-primary/20 hover:bg-primary/10 text-foreground font-semibold"
-                    onClick={() => document.getElementById('magic-image-input')?.click()}
-                    disabled={isMagicLoading}
-                  >
-                    {isMagicLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Camera className="h-4 w-4" /> Capturar Foto(s) da Capa/Verso</>}
-                  </Button>
+                <div className="flex flex-col gap-3">
+                  {queuedImages.length > 0 && (
+                    <div className="flex flex-wrap gap-2 p-2 bg-background/50 rounded-lg border border-primary/10">
+                      {queuedImages.map((img, idx) => (
+                        <div key={idx} className="relative group">
+                          <img
+                            src={`data:image/jpeg;base64,${img}`}
+                            alt={`Captação ${idx + 1}`}
+                            className="w-16 h-20 object-cover rounded border"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setQueuedImages(prev => prev.filter((_, i) => i !== idx))}
+                            className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-2 border-primary/20 hover:bg-primary/10 text-foreground font-semibold"
+                      onClick={() => document.getElementById('magic-image-input')?.click()}
+                      disabled={isMagicLoading}
+                    >
+                      <Camera className="h-4 w-4 text-primary" />
+                      {queuedImages.length > 0 ? "Tirar Mais" : "Capturar Foto"}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="default"
+                      disabled={isMagicLoading || queuedImages.length === 0}
+                      onClick={() => handleMagicFill()}
+                      className="gap-2 shadow-sm font-bold"
+                    >
+                      {isMagicLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4" />
+                      )}
+                      Processar {queuedImages.length > 0 ? `(${queuedImages.length})` : ""}
+                    </Button>
+                  </div>
+
+                  {queuedImages.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setQueuedImages([])}
+                      className="text-[10px] text-muted-foreground hover:text-destructive flex items-center justify-center gap-1 transition-colors"
+                    >
+                      <RotateCcw className="h-3 w-3" /> Limpar todas as fotos
+                    </button>
+                  )}
+
                   <input
                     id="magic-image-input"
                     type="file"

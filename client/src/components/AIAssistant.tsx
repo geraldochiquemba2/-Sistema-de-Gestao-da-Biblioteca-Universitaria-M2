@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { BookUser, X, Send, Bot, User, Loader2, Minimize2, Volume2, VolumeX, Settings, Sparkles, AudioLines, Zap, Activity, Laugh, Smile, ImagePlus, Globe } from "lucide-react";
+import { BookUser, X, Send, Bot, User, Loader2, Minimize2, Volume2, VolumeX, Settings, Sparkles, AudioLines, Zap, Activity, Laugh, Smile, ImagePlus, Globe, Headphones } from "lucide-react";
+import { KokoroTTS } from "kokoro-js";
 import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -31,7 +32,10 @@ export function AIAssistant() {
     ]);
     const [isLoading, setIsLoading] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState<number | null>(null);
-    const [voiceMode, setVoiceMode] = useState<"native" | "hd">("hd");
+    const [voiceMode, setVoiceMode] = useState<"native" | "hd" | "kokoro">("kokoro");
+    const [selectedKokoroVoice, setSelectedKokoroVoice] = useState("pf_dora");
+    const [kokoroModel, setKokoroModel] = useState<any>(null);
+    const [isKokoroLoading, setIsKokoroLoading] = useState(false);
     const [voiceEnergy, setVoiceEnergy] = useState<"calm" | "balanced" | "energetic" | "funny" | "lol">("balanced");
     const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
     const [selectedNativeVoice, setSelectedNativeVoice] = useState<string | null>(null);
@@ -91,6 +95,8 @@ export function AIAssistant() {
 
         if (voiceMode === "native") {
             handleNativeSpeak(cleanedText, index);
+        } else if (voiceMode === "kokoro") {
+            handleKokoroSpeak(cleanedText, index);
         } else {
             handleHDSpeak(cleanedText, index);
         }
@@ -140,6 +146,52 @@ export function AIAssistant() {
 
         setIsSpeaking(index);
         window.speechSynthesis.speak(utterance);
+    };
+
+    const handleKokoroSpeak = async (text: string, index: number) => {
+        let model = kokoroModel;
+        if (!model) {
+            setIsKokoroLoading(true);
+            try {
+                model = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX", {
+                    dtype: "q8",
+                    device: "wasm",
+                });
+                setKokoroModel(model);
+            } catch (error) {
+                console.error("Error loading Kokoro TTS:", error);
+                setIsKokoroLoading(false);
+                handleHDSpeak(text, index); // Fallback to Google
+                return;
+            }
+            setIsKokoroLoading(false);
+        }
+
+        setIsSpeaking(index);
+        try {
+            const audioResult = await model.generate(text, {
+                voice: selectedKokoroVoice,
+            });
+
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const audioBuffer = await ctx.decodeAudioData(audioResult.audio.buffer);
+            const playSource = ctx.createBufferSource();
+            playSource.buffer = audioBuffer;
+            playSource.connect(ctx.destination);
+            playSource.onended = () => setIsSpeaking(null);
+
+            const audioObj = {
+                pause: () => {
+                    try { playSource.stop(); } catch (e) { }
+                }
+            };
+            audioRef.current = audioObj as any;
+            playSource.start();
+        } catch (error) {
+            console.error("Error generating speech with Kokoro:", error);
+            setIsSpeaking(null);
+            handleHDSpeak(text, index); // Fallback
+        }
     };
 
     const handleHDSpeak = (text: string, index: number) => {
@@ -266,7 +318,7 @@ export function AIAssistant() {
                                     </div>
                                     <div>
                                         <CardTitle className="text-sm font-bold">Mentor Digital</CardTitle>
-                                        <p className="text-[10px] opacity-80">Qualidade: {voiceMode === "hd" ? "HD (Natural)" : "Padrão"}</p>
+                                        <p className="text-[10px] opacity-80">Qualidade: {voiceMode === "kokoro" ? "Kokoro HD (Voz Humana)" : voiceMode === "hd" ? "Google HD" : "Padrão"}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-1">
@@ -292,10 +344,27 @@ export function AIAssistant() {
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem onClick={() => setVoiceMode("hd")} className="flex items-center justify-between cursor-pointer">
                                                 <div className="flex items-center gap-2">
-                                                    <Sparkles className="h-4 w-4 text-primary" />
-                                                    <span>Voz HD (Google)</span>
+                                                    <Globe className="h-4 w-4 text-blue-500" />
+                                                    <span>Google HD</span>
                                                 </div>
                                                 {voiceMode === "hd" && <div className="h-2 w-2 rounded-full bg-primary" />}
+                                            </DropdownMenuItem>
+
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuLabel className="text-[10px] font-normal opacity-50 uppercase tracking-wider">Vozes Kokoro HD (Português)</DropdownMenuLabel>
+                                            <DropdownMenuItem onClick={() => { setVoiceMode("kokoro"); setSelectedKokoroVoice("pf_dora"); }} className="flex items-center justify-between cursor-pointer">
+                                                <div className="flex items-center gap-2">
+                                                    <Sparkles className="h-4 w-4 text-primary" />
+                                                    <span>Dora (Feminina)</span>
+                                                </div>
+                                                {voiceMode === "kokoro" && selectedKokoroVoice === "pf_dora" && <div className="h-2 w-2 rounded-full bg-primary" />}
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => { setVoiceMode("kokoro"); setSelectedKokoroVoice("pm_santa"); }} className="flex items-center justify-between cursor-pointer">
+                                                <div className="flex items-center gap-2">
+                                                    <Headphones className="h-4 w-4 text-primary" />
+                                                    <span>Santa (Masculina)</span>
+                                                </div>
+                                                {voiceMode === "kokoro" && selectedKokoroVoice === "pm_santa" && <div className="h-2 w-2 rounded-full bg-primary" />}
                                             </DropdownMenuItem>
 
                                             <DropdownMenuSeparator />
